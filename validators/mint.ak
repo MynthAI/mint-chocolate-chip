@@ -1,13 +1,16 @@
 use aiken/dict
+use aiken/hash.{Blake2b_256, Hash}
 use aiken/list
 use aiken/transaction.{
-  Input, Mint, NoDatum, Output, OutputReference, ScriptContext, TransactionId,
+  Input, Mint, NoDatum, Output, OutputReference, ScriptContext, Transaction,
+  TransactionId,
 }
 use aiken/transaction/credential.{Address, VerificationKeyCredential}
 use aiken/transaction/value.{MintedValue, PolicyId}
 
-validator(utxo_ref: OutputReference) {
+validator(tx_id: Hash<Blake2b_256, Transaction>, index: Int) {
   pub fn mint(_r: Data, ctx: ScriptContext) {
+    let utxo_ref = OutputReference(TransactionId(tx_id), index)
     expect Mint(own_policy_id) = ctx.purpose
     mint_logic(
       own_policy_id,
