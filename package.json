@@ -4,7 +4,7 @@
   "description": "A one-time-mint, any-time burn Aiken validator.",
   "type": "module",
   "scripts": {
-    "build": "npx tsc",
+    "build": "concurrently \"aiken build\" \"npx tsc\"",
     "mint": "npx tsx src/mint.ts",
     "prettier": "npx prettier -w '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'",
     "lint": "concurrently \"npx prettier --check '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'\" \"npx eslint . --max-warnings=0\""
