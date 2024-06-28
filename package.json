@@ -2,6 +2,7 @@
   "name": "mint-chocolate-chip",
   "private": true,
   "description": "A one-time-mint, any-time burn Aiken validator.",
+  "type": "module",
   "scripts": {
     "build": "npx tsc",
     "mint": "npx tsx src/mint.ts",
@@ -9,7 +10,10 @@
     "lint": "concurrently \"npx prettier --check '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'\" \"npx eslint . --max-warnings=0\""
   },
   "dependencies": {
-    "@lucid-evolution/lucid": "^0.2.45"
+    "@cardano-ts/node": "^0.1.3",
+    "@lucid-evolution/lucid": "^0.2.45",
+    "arktype": "^2.0.0-dev.26",
+    "commander": "^12.1.0"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.1.0",
