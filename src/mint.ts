@@ -64,6 +64,9 @@ const program = new Command()
       .validTo(Date.now() + expiresIn)
       .mintAssets({ [token]: amount }, Data.void())
       .attach.MintingPolicy(script);
+
+    const completed = await (await tx.complete()).complete();
+    console.log(completed.toCBOR());
   });
 
 const validate = <T, U>(validator: Type<T, U>, data: unknown) => {
