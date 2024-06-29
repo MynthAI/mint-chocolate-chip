@@ -55,7 +55,7 @@ const program = new Command()
       .newTx()
       .validTo(Date.now() + expiresIn)
       .pay.ToAddress(wallet.address, { lovelace: 2000000n });
-    const [[ref, ...setupUtxos], _a, setupTx] = await setup.chain();
+    const [[ref, ...setupUtxos], , setupTx] = await setup.chain();
     lucid.selectWallet.fromAddress(wallet.address, setupUtxos);
     txs.push(setupTx);
 
@@ -71,7 +71,7 @@ const program = new Command()
         { lovelace: 4000000n },
         script
       );
-    const [[refScript, ...deployUtxos], _b, deployTx] = await deploy.chain();
+    const [[refScript, ...deployUtxos], , deployTx] = await deploy.chain();
     if (!refScript.scriptRef) return logThenExit("Script didn't deploy");
     lucid.selectWallet.fromAddress(wallet.address, deployUtxos);
     txs.push(deployTx);
@@ -82,9 +82,10 @@ const program = new Command()
       .mintAssets({ [token]: amount }, Data.void())
       .readFrom([refScript])
       .collectFrom([ref]);
+    const [, , mintTx] = await tx.chain();
+    txs.push(mintTx);
 
-    const completed = await (await tx.complete()).complete();
-    console.log(completed.toCBOR());
+    for (const tx of txs) console.log((await tx.complete()).toCBOR());
   });
 
 const validate = <T, U>(validator: Type<T, U>, data: unknown) => {
