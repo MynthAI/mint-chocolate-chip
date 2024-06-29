@@ -8,8 +8,11 @@ import {
   Data,
   fromText,
   Lucid,
+  MintingPolicy,
   mintingPolicyToId,
   Network,
+  TxSignBuilder,
+  UTxO,
 } from "@lucid-evolution/lucid";
 import { type, Type } from "arktype";
 import { Command } from "commander";
@@ -32,22 +35,13 @@ const program = new Command()
     const projectId = config.BLOCKFROST_API_KEY;
     const blockfrost = new CardanoBlockfrost(projectId);
     const wallet = await Wallet.fromAddress(blockfrost, address);
-
     if (!wallet.utxos.length) return logThenExit("Wallet must be funded");
 
     const plutusPath = join(here, "..", "plutus.json");
     const plutus = Plutus(JSON.parse(await fs.readFile(plutusPath, "utf8")));
     if (plutus instanceof type.errors) return logThenExit(plutus.summary);
 
-    const ref = wallet.utxos[0];
-    const script = {
-      type: "PlutusV2",
-      script: applyParamsToScript(plutus, [
-        ref.txHash,
-        BigInt(ref.outputIndex),
-      ]),
-    } as const;
-
+    const txs: TxSignBuilder[] = [];
     const lucid = await Lucid(
       new Blockfrost(
         `https://cardano-${blockfrost.network}.blockfrost.io/api/v0`,
@@ -57,13 +51,37 @@ const program = new Command()
     );
     lucid.selectWallet.fromAddress(wallet.address, wallet.utxos);
 
+    const setup = lucid
+      .newTx()
+      .validTo(Date.now() + expiresIn)
+      .pay.ToAddress(wallet.address, { lovelace: 2000000n });
+    const [[ref, ...setupUtxos], _a, setupTx] = await setup.chain();
+    lucid.selectWallet.fromAddress(wallet.address, setupUtxos);
+    txs.push(setupTx);
+
+    const script = createScript(plutus, ref);
     const policy = mintingPolicyToId(script);
     const token = policy + name;
+    const deploy = lucid
+      .newTx()
+      .validTo(Date.now() + expiresIn)
+      .pay.ToAddressWithData(
+        wallet.address,
+        { kind: "inline", value: Data.void() },
+        { lovelace: 4000000n },
+        script
+      );
+    const [[refScript, ...deployUtxos], _b, deployTx] = await deploy.chain();
+    if (!refScript.scriptRef) return logThenExit("Script didn't deploy");
+    lucid.selectWallet.fromAddress(wallet.address, deployUtxos);
+    txs.push(deployTx);
+
     const tx = lucid
       .newTx()
       .validTo(Date.now() + expiresIn)
       .mintAssets({ [token]: amount }, Data.void())
-      .attach.MintingPolicy(script);
+      .readFrom([refScript])
+      .collectFrom([ref]);
 
     const completed = await (await tx.complete()).complete();
     console.log(completed.toCBOR());
@@ -78,6 +96,13 @@ const validate = <T, U>(validator: Type<T, U>, data: unknown) => {
 const logThenExit = (message: string): never => {
   console.error(message);
   process.exit(1);
+};
+
+const createScript = (plutus: string, ref: UTxO): MintingPolicy => {
+  return {
+    type: "PlutusV2",
+    script: applyParamsToScript(plutus, [ref.txHash, BigInt(ref.outputIndex)]),
+  };
 };
 
 const TokenName = type("string<=20").pipe((s) => fromText(s));
