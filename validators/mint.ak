@@ -28,6 +28,7 @@ fn mint_validator(
   or {
     allow_burn(policy, mint),
     allow_mint_only_once(reference, inputs),
+    fail @"After minting, only burning is possible",
   }
 }
 
