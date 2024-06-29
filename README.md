@@ -92,6 +92,12 @@ CBOR that you can sign and submit.
   - **Unique Policy IDs**: Each minting operation generates a new policy
     ID, ensuring the uniqueness of each token batch.
 
+## License
+
+This project is licensed under the GNU Lesser General Public License
+(LGPL). By using or contributing to this project, you agree to the terms
+and conditions of LGPL.
+
 ## Support
 
 If you encounter any issues or have questions, feel free to reach out
