@@ -1,0 +1,25 @@
+name: Aiken
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Aiken
+        run: |
+          curl -sSfL https://install.aiken-lang.org | bash
+          ~/.aiken/bin/aikup
+          sudo ln -s ~/.aiken/bin/aiken /usr/local/bin/aiken
+
+      - name: Run tests
+        run: aiken check
