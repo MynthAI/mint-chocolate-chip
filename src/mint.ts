@@ -13,6 +13,7 @@ import {
   Network,
   TxSignBuilder,
   UTxO,
+  validatorToAddress,
 } from "@lucid-evolution/lucid";
 import { type, Type } from "arktype";
 import { Command } from "commander";
@@ -41,6 +42,7 @@ const program = new Command()
     const plutus = Plutus(JSON.parse(await fs.readFile(plutusPath, "utf8")));
     if (plutus instanceof type.errors) return logThenExit(plutus.summary);
 
+    const network = convertNetwork(blockfrost);
     const txs: TxSignBuilder[] = [];
     const lucid = await Lucid(
       new Blockfrost(
@@ -59,19 +61,20 @@ const program = new Command()
     lucid.selectWallet.fromAddress(wallet.address, setupUtxos);
     txs.push(setupTx);
 
+    const blackhole = createBlackholeAddress(network);
     const script = createScript(plutus, ref);
     const policy = mintingPolicyToId(script);
     const token = policy + name;
     const deploy = lucid
       .newTx()
       .validTo(Date.now() + expiresIn)
-      .pay.ToAddressWithData(
-        wallet.address,
+      .pay.ToContract(
+        blackhole,
         { kind: "inline", value: Data.void() },
-        { lovelace: 4000000n },
+        undefined,
         script
       );
-    const [[refScript, ...deployUtxos], , deployTx] = await deploy.chain();
+    const [deployUtxos, [refScript], deployTx] = await deploy.chain();
     if (!refScript.scriptRef) return logThenExit("Script didn't deploy");
     lucid.selectWallet.fromAddress(wallet.address, deployUtxos);
     txs.push(deployTx);
@@ -104,6 +107,19 @@ const createScript = (plutus: string, ref: UTxO): MintingPolicy => {
     type: "PlutusV2",
     script: applyParamsToScript(plutus, [ref.txHash, BigInt(ref.outputIndex)]),
   };
+};
+
+const createBlackholeAddress = (network: Network) => {
+  const header = "5839010000322253330033371e9101203";
+  const body = Array.from({ length: 63 }, () =>
+    Math.floor(Math.random() * 10)
+  ).join("");
+  const footer = "0048810014984d9595cd01";
+
+  return validatorToAddress(network, {
+    type: "PlutusV2",
+    script: `${header}${body}${footer}`,
+  });
 };
 
 const TokenName = type("string<=20").pipe((s) => fromText(s));
