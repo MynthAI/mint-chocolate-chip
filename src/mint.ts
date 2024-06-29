@@ -11,7 +11,7 @@ import {
   mintingPolicyToId,
   Network,
 } from "@lucid-evolution/lucid";
-import { type } from "arktype";
+import { type, Type } from "arktype";
 import { Command } from "commander";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -24,14 +24,10 @@ const program = new Command()
   .argument("<name>", "The name of the token to mint")
   .argument("<amount>", "The amount of token to mint")
   .action(async ($address, $name, $amount) => {
-    const address = type("string")($address);
-    if (address instanceof type.errors) return logThenExit(address.summary);
-    const name = TokenName($name);
-    if (name instanceof type.errors) return logThenExit(name.summary);
-    const amount = Amount($amount);
-    if (amount instanceof type.errors) return logThenExit(amount.summary);
-    const config = Config(process.env);
-    if (config instanceof type.errors) return logThenExit(config.summary);
+    const address = validate(type("string"), $address);
+    const name = validate(TokenName, $name);
+    const amount = validate(Amount, $amount);
+    const config = validate(Config, process.env);
 
     const projectId = config.BLOCKFROST_API_KEY;
     const blockfrost = new CardanoBlockfrost(projectId);
@@ -69,6 +65,12 @@ const program = new Command()
       .mintAssets({ [token]: amount }, Data.void())
       .attach.MintingPolicy(script);
   });
+
+const validate = <T, U>(validator: Type<T, U>, data: unknown) => {
+  const result = validator(data);
+  if (result instanceof type.errors) return logThenExit(result.summary);
+  return result;
+};
 
 const logThenExit = (message: string): never => {
   console.error(message);
