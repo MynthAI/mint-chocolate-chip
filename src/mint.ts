@@ -3,7 +3,6 @@ import {
   applyParamsToScript,
   Blockfrost,
   Data,
-  fromText,
   Lucid,
   MintingPolicy,
   mintingPolicyToId,
@@ -12,9 +11,16 @@ import {
   UTxO,
   validatorToAddress,
 } from "@lucid-evolution/lucid";
-import { type, Type } from "arktype";
 import { Command } from "commander";
 import { Problem } from "ts-handling";
+import {
+  Address,
+  Amount,
+  Config,
+  logThenExit,
+  TokenName,
+  validate,
+} from "./inputs";
 import { loadPlutus } from "./script";
 
 const expiresIn = 600000; // About 10 minutes
@@ -26,7 +32,7 @@ const program = new Command()
   .argument("<name>", "The name of the token to mint")
   .argument("<amount>", "The amount of token to mint")
   .action(async ($address, $name, $amount) => {
-    const address = validate(type("string"), $address);
+    const address = validate(Address, $address);
     const name = validate(TokenName, $name);
     const amount = validate(Amount, $amount);
     const config = validate(Config, process.env);
@@ -90,17 +96,6 @@ const program = new Command()
     console.log(`\nReference: ${refScript.txHash}`);
   });
 
-const validate = <T, U>(validator: Type<T, U>, data: unknown) => {
-  const result = validator(data);
-  if (result instanceof type.errors) return logThenExit(result.summary);
-  return result;
-};
-
-const logThenExit = (message: string): never => {
-  console.error(message);
-  process.exit(1);
-};
-
 const createScript = (plutus: string, ref: UTxO): MintingPolicy => {
   return {
     type: "PlutusV2",
@@ -120,22 +115,6 @@ const createBlackholeAddress = (network: Network) => {
     script: `${header}${body}${footer}`,
   });
 };
-
-const TokenName = type("string<=20").pipe((s) => fromText(s));
-
-const Amount = type("string")
-  .pipe((s, ctx) => {
-    try {
-      return BigInt(s);
-    } catch {
-      return ctx.error("valid non-decimal number");
-    }
-  })
-  .narrow((v) => v > 0n);
-
-const Config = type({
-  BLOCKFROST_API_KEY: "string==39",
-});
 
 const convertNetwork = (blockfrost: CardanoBlockfrost) => {
   const network = blockfrost.network;

@@ -6,9 +6,9 @@ import {
   mintingPolicyToId,
   Network,
 } from "@lucid-evolution/lucid";
-import { type, Type } from "arktype";
 import { Command } from "commander";
 import { Problem } from "ts-handling";
+import { Address, Amount, Config, logThenExit, TxId, validate } from "./inputs";
 import { loadPlutus } from "./script";
 
 const expiresIn = 600000; // About 10 minutes
@@ -20,7 +20,7 @@ const program = new Command()
   .argument("<reference>", "The reference given during the mint")
   .argument("<amount>", "The amount of token to burn")
   .action(async ($address, $reference, $amount) => {
-    const address = validate(type("string"), $address);
+    const address = validate(Address, $address);
     const reference = validate(TxId, $reference);
     const amount = validate(Amount, $amount);
     const config = validate(Config, process.env);
@@ -64,35 +64,6 @@ const program = new Command()
     const completed = await (await tx.complete()).complete();
     console.log(completed.toCBOR());
   });
-
-const validate = <T, U>(validator: Type<T, U>, data: unknown) => {
-  const result = validator(data);
-  if (result instanceof type.errors) return logThenExit(result.summary);
-  return result;
-};
-
-const logThenExit = (message: string): never => {
-  console.error(message);
-  process.exit(1);
-};
-
-const TxId = type("string==64")
-  .pipe((s) => s.toLowerCase())
-  .narrow((s, ctx) => /^[0-9A-Fa-f]+$/g.test(s) || ctx.mustBe("tx ID"));
-
-const Amount = type("string")
-  .pipe((s, ctx) => {
-    try {
-      return BigInt(s);
-    } catch {
-      return ctx.error("valid non-decimal number");
-    }
-  })
-  .narrow((v) => v > 0n);
-
-const Config = type({
-  BLOCKFROST_API_KEY: "string==39",
-});
 
 const convertNetwork = (blockfrost: CardanoBlockfrost) => {
   const network = blockfrost.network;
