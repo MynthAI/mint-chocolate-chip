@@ -1,4 +1,3 @@
-import { Blockfrost as CardanoBlockfrost, Wallet } from "@cardano-ts/node";
 import {
   applyParamsToScript,
   Data,
@@ -10,8 +9,8 @@ import {
   validatorToAddress,
 } from "@lucid-evolution/lucid";
 import { Command } from "commander";
-import { loadLucid } from "lucid";
 import { Problem } from "ts-handling";
+import { loadLucid } from "wallet";
 import {
   Address,
   Amount,
@@ -21,6 +20,7 @@ import {
   validate,
 } from "./inputs";
 import { loadPlutus } from "./script";
+import { getNetwork, loadWallet } from "./wallet";
 
 const program = new Command()
   .name("mint")
@@ -35,14 +35,13 @@ const program = new Command()
     const config = validate(Config, process.env);
 
     const projectId = config.BLOCKFROST_API_KEY;
-    const blockfrost = new CardanoBlockfrost(projectId);
-    const wallet = await Wallet.fromAddress(blockfrost, address);
+    const wallet = await loadWallet(projectId, address);
     if (!wallet.utxos.length) return logThenExit("Wallet must be funded");
 
     const plutus = (await loadPlutus()).unwrap();
     if (plutus instanceof Problem) return logThenExit(plutus.error);
 
-    const network = convertNetwork(blockfrost);
+    const network = getNetwork(projectId);
     const txs: TxSignBuilder[] = [];
     const lucid = await loadLucid(projectId);
     lucid.selectWallet.fromAddress(wallet.address, wallet.utxos);
@@ -102,17 +101,6 @@ const createBlackholeAddress = (network: Network) => {
     type: "PlutusV2",
     script: `${header}${body}${footer}`,
   });
-};
-
-const convertNetwork = (blockfrost: CardanoBlockfrost) => {
-  const network = blockfrost.network;
-  type CardanoNetwork = typeof network;
-  const networks: Record<CardanoNetwork, Network> = {
-    mainnet: "Mainnet",
-    preprod: "Preprod",
-    preview: "Preview",
-  };
-  return networks[network];
 };
 
 program.parseAsync(process.argv);

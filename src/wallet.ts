@@ -1,7 +1,10 @@
-import { Blockfrost as CardanoBlockfrost } from "@cardano-ts/node";
+import { Blockfrost as CardanoBlockfrost, Wallet } from "@cardano-ts/node";
 import { Blockfrost, Lucid, Network } from "@lucid-evolution/lucid";
 
 const expiresIn = 600000; // About 10 minutes
+
+const loadWallet = (projectId: string, address: string) =>
+  Wallet.fromAddress(new CardanoBlockfrost(projectId), address);
 
 const loadLucid = async (projectId: string) => {
   const blockfrost = new CardanoBlockfrost(projectId);
@@ -10,7 +13,7 @@ const loadLucid = async (projectId: string) => {
       `https://cardano-${blockfrost.network}.blockfrost.io/api/v0`,
       projectId
     ),
-    convertNetwork(blockfrost)
+    getNetwork(projectId)
   );
 
   const newTx = lucid.newTx;
@@ -19,8 +22,8 @@ const loadLucid = async (projectId: string) => {
   return lucid;
 };
 
-const convertNetwork = (blockfrost: CardanoBlockfrost) => {
-  const network = blockfrost.network;
+const getNetwork = (projectId: string) => {
+  const network = new CardanoBlockfrost(projectId).network;
   type CardanoNetwork = typeof network;
   const networks: Record<CardanoNetwork, Network> = {
     mainnet: "Mainnet",
@@ -30,4 +33,4 @@ const convertNetwork = (blockfrost: CardanoBlockfrost) => {
   return networks[network];
 };
 
-export { loadLucid };
+export { getNetwork, loadLucid, loadWallet };

@@ -1,10 +1,9 @@
-import { Blockfrost as CardanoBlockfrost, Wallet } from "@cardano-ts/node";
 import { Data, mintingPolicyToId } from "@lucid-evolution/lucid";
 import { Command } from "commander";
 import { Problem } from "ts-handling";
 import { Address, Amount, Config, logThenExit, TxId, validate } from "./inputs";
-import { loadLucid } from "./lucid";
 import { loadPlutus } from "./script";
+import { loadLucid, loadWallet } from "./wallet";
 
 const program = new Command()
   .name("burns")
@@ -19,8 +18,7 @@ const program = new Command()
     const config = validate(Config, process.env);
 
     const projectId = config.BLOCKFROST_API_KEY;
-    const blockfrost = new CardanoBlockfrost(projectId);
-    const wallet = await Wallet.fromAddress(blockfrost, address);
+    const wallet = await loadWallet(projectId, address);
     if (!wallet.utxos.length) return logThenExit("Wallet must be funded");
 
     const plutus = (await loadPlutus()).unwrap();
