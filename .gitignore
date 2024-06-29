@@ -6,3 +6,6 @@ build/
 docs/
 node_modules
 plutus.json
+sign.*
+*.json.draft
+/[a-f0-9]*.json

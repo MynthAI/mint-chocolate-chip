@@ -1,0 +1,8 @@
+minted_name: My Example Token
+name: My Example Token
+description: This is a demo token
+ticker: DEMO
+url: https://www.mynth.ai/
+logo: logo.png
+decimals: 6
+policy: 82038d92eb9da4d45dd594171332fd13ed58232a5430f836b4db7a14
