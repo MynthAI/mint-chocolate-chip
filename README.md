@@ -7,6 +7,13 @@ minting operation generates a unique policy ID, ensuring the uniqueness
 of each token batch. You can use this tool to mint various types of
 tokens.
 
+## Credits
+
+This project is a fork of
+[SundaeSwap-finance/mint-chocolate-chip](https://github.com/SundaeSwap-finance/mint-chocolate-chip)
+and builds upon the work of
+[MynthAI/token-minter](https://github.com/MynthAI/token-minter).
+
 ## Installation
 
 To install the package, use npm:
