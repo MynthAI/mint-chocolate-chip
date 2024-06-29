@@ -2,6 +2,12 @@
   "name": "mint-chocolate-chip",
   "private": true,
   "description": "A one-time-mint, any-time burn Aiken validator.",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MynthAI/mint-chocolate-chip.git"
+  },
+  "homepage": "https://github.com/MynthAI/mint-chocolate-chip",
   "type": "module",
   "scripts": {
     "build": "concurrently \"aiken build\" \"npx tsc\"",
