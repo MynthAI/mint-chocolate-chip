@@ -44,10 +44,13 @@ const program = new Command()
     if (plutus instanceof type.errors) return logThenExit(plutus.summary);
 
     const ref = wallet.utxos[0];
-    const script = applyParamsToScript(plutus, [
-      ref.txHash,
-      BigInt(ref.outputIndex),
-    ]);
+    const script = {
+      type: "PlutusV2",
+      script: applyParamsToScript(plutus, [
+        ref.txHash,
+        BigInt(ref.outputIndex),
+      ]),
+    } as const;
 
     const lucid = await Lucid(
       new Blockfrost(
@@ -58,15 +61,13 @@ const program = new Command()
     );
     lucid.selectWallet.fromAddress(wallet.address, wallet.utxos);
 
-    const policy = mintingPolicyToId({
-      type: "PlutusV2",
-      script,
-    });
+    const policy = mintingPolicyToId(script);
     const token = policy + name;
     const tx = lucid
       .newTx()
       .validTo(Date.now() + expiresIn)
-      .mintAssets({ [token]: amount }, Data.void());
+      .mintAssets({ [token]: amount }, Data.void())
+      .attach.MintingPolicy(script);
   });
 
 const logThenExit = (message: string): never => {
