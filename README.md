@@ -99,6 +99,103 @@ CBOR that you can sign and submit.
   - **Unique Policy IDs**: Each minting operation generates a new policy
     ID, ensuring the uniqueness of each token batch.
 
+## Generating Metadata for Cardano Token Registry
+
+To generate metadata for your token to be included in the [Cardano Token
+Registry](https://github.com/cardano-foundation/cardano-token-registry),
+follow these steps:
+
+### Step-by-Step Setup Instructions
+
+1.  **Download and Extract `token-metadata-creator`**:
+      - Download `token-metadata-creator.tar.gz` from the
+        [offchain-metadata-tools
+        releases](https://github.com/input-output-hk/offchain-metadata-tools/releases).
+    
+      - Extract the downloaded tarball:
+        
+        ``` bash
+        tar -xvzf token-metadata-creator.tar.gz
+        ```
+    
+      - Add the extracted `token-metadata-creator` to your PATH. You can
+        do this by adding the following line to your `~/.bashrc` or
+        `~/.zshrc` file:
+        
+        ``` bash
+        export PATH=$PATH:/path/to/extracted/token-metadata-creator
+        ```
+    
+      - Reload your shell configuration:
+        
+        ``` bash
+        source ~/.bashrc
+        # or
+        source ~/.zshrc
+        ```
+2.  **Install `cardano-cli`**:
+      - Follow the instructions in the [official Cardano
+        documentation](https://docs.cardano.org/getting-started/installing-the-cardano-node)
+        to install `cardano-cli`.
+3.  **Install `yq`**:
+      - Install `yq`, a lightweight and portable command-line YAML
+        processor:
+        
+        ``` bash
+        # On macOS using Homebrew
+        brew install yq
+        
+        # On Ubuntu using Snap
+        sudo snap install yq
+        ```
+
+### Step-by-Step Metadata Generation
+
+1.  **Prepare Metadata File**: Create a `metadata.yml` file with the
+    following details:
+    
+    ``` yaml
+    minted_name: My Example Token
+    name: My Example Token
+    description: This is a demo token
+    ticker: DEMO
+    url: https://www.mynth.ai/
+    logo: logo.png
+    decimals: 6
+    policy: 82038d92eb9da4d45dd594171332fd13ed58232a5430f836b4db7a14
+    ```
+    
+      - **minted\_name**: The name of the token as minted on the
+        blockchain.
+      - **name**: The name of the token for display purposes.
+      - **description**: A brief description of the token.
+      - **ticker**: The ticker symbol for the token.
+      - **url**: The website URL associated with the token.
+      - **logo**: The file name of the token’s logo (ensure the file is
+        available in the specified directory).
+      - **decimals**: The number of decimal places for the token.
+      - **policy**: The policy ID under which the token was minted.
+
+2.  **Generate Metadata**: Run the following command to generate the
+    metadata:
+    
+    ``` bash
+    bash metadata.sh
+    ```
+
+3.  **Save the Signing Key**: The command will generate a `sign.vkey`
+    file. It is crucial to save this key securely as it will be required
+    for updating the metadata in the future.
+
+4.  **Submit Metadata**: After running the command, a JSON file starting
+    with your specified policy ID will be generated. Submit this JSON
+    file as a Pull Request (PR) to the [Cardano Token
+    Registry](https://github.com/cardano-foundation/cardano-token-registry).
+
+By following these steps, you can generate and submit the necessary
+metadata to have your token recognized and included in the Cardano Token
+Registry.
+
 ## License
 
 This project is licensed under the GNU Lesser General Public License
