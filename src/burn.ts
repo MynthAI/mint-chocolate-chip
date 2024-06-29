@@ -1,6 +1,3 @@
-import fs from "fs/promises";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
 import { Blockfrost as CardanoBlockfrost, Wallet } from "@cardano-ts/node";
 import {
   Blockfrost,
@@ -11,8 +8,9 @@ import {
 } from "@lucid-evolution/lucid";
 import { type, Type } from "arktype";
 import { Command } from "commander";
+import { Problem } from "ts-handling";
+import { loadPlutus } from "./script";
 
-const here = dirname(fileURLToPath(import.meta.url));
 const expiresIn = 600000; // About 10 minutes
 
 const program = new Command()
@@ -32,9 +30,8 @@ const program = new Command()
     const wallet = await Wallet.fromAddress(blockfrost, address);
     if (!wallet.utxos.length) return logThenExit("Wallet must be funded");
 
-    const plutusPath = join(here, "..", "plutus.json");
-    const plutus = Plutus(JSON.parse(await fs.readFile(plutusPath, "utf8")));
-    if (plutus instanceof type.errors) return logThenExit(plutus.summary);
+    const plutus = (await loadPlutus()).unwrap();
+    if (plutus instanceof Problem) return logThenExit(plutus.error);
 
     const lucid = await Lucid(
       new Blockfrost(
@@ -96,14 +93,6 @@ const Amount = type("string")
 const Config = type({
   BLOCKFROST_API_KEY: "string==39",
 });
-
-const Plutus = type({
-  validators: [
-    {
-      compiledCode: "string",
-    },
-  ],
-}).pipe((v) => v.validators[0].compiledCode);
 
 const convertNetwork = (blockfrost: CardanoBlockfrost) => {
   const network = blockfrost.network;
