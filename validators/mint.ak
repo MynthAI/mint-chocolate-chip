@@ -9,43 +9,43 @@ use aiken/transaction/credential.{Address, VerificationKeyCredential}
 use aiken/transaction/value.{MintedValue, PolicyId}
 
 validator(tx_id: Hash<Blake2b_256, Transaction>, index: Int) {
-  pub fn mint(_r: Data, ctx: ScriptContext) {
-    let utxo_ref = OutputReference(TransactionId(tx_id), index)
-    expect Mint(own_policy_id) = ctx.purpose
-    mint_logic(
-      own_policy_id,
-      utxo_ref,
-      ctx.transaction.inputs,
-      ctx.transaction.mint,
-    )
+  fn mint(_redeemer: Data, ctx: ScriptContext) {
+    let reference = OutputReference(TransactionId(tx_id), index)
+    let ScriptContext(Transaction { inputs, mint, .. }, _) = ctx
+    when ctx.purpose is {
+      Mint(policy) -> mint_validator(policy, reference, inputs, mint)
+      _ -> fail @"This is a minting policy"
+    }
   }
 }
 
-fn mint_logic(
-  own_policy_id: PolicyId,
-  utxo_ref: OutputReference,
+fn mint_validator(
+  policy: PolicyId,
+  reference: OutputReference,
   inputs: List<Input>,
   mint: MintedValue,
 ) -> Bool {
-  let utxo_spent =
-    inputs
-      |> list.any(fn(i) { i.output_reference == utxo_ref })
-  let only_burns =
-    mint
-      |> value.from_minted_value()
-      |> value.tokens(own_policy_id)
-      |> dict.to_pairs()
-      |> list.all(
-          fn(v) {
-            let Pair(_, qty) = v
-            qty < 0
-          },
-        )
-
   or {
-    utxo_spent,
-    only_burns,
+    allow_burn(policy, mint),
+    allow_mint_only_once(reference, inputs),
   }
+}
+
+fn allow_burn(policy: PolicyId, mint: MintedValue) -> Bool {
+  mint
+    |> value.from_minted_value()
+    |> value.tokens(policy)
+    |> dict.to_pairs()
+    |> list.all(
+        fn(v) {
+          let Pair(_, quantity) = v
+          quantity < 0
+        },
+      )
+}
+
+fn allow_mint_only_once(reference: OutputReference, inputs: List<Input>) -> Bool {
+  inputs |> list.any(fn(i) { i.output_reference == reference })
 }
 
 fn inputs(utxo_ref: OutputReference) -> List<Input> {
@@ -73,7 +73,7 @@ test can_mint() {
     [Pair(own_policy_id, [Pair(#"", 1)])]
       |> value.from_asset_list()
       |> value.to_minted_value()
-  mint_logic(own_policy_id, utxo_ref, inputs, minted_value)
+  mint_validator(own_policy_id, utxo_ref, inputs, minted_value)
 }
 
 test can_mint_multiple() {
@@ -84,7 +84,7 @@ test can_mint_multiple() {
     [Pair(own_policy_id, [Pair(#"", 1), Pair(#"abcd", 3)])]
       |> value.from_asset_list()
       |> value.to_minted_value()
-  mint_logic(own_policy_id, utxo_ref, inputs, minted_value)
+  mint_validator(own_policy_id, utxo_ref, inputs, minted_value)
 }
 
 test can_burn() {
@@ -95,7 +95,7 @@ test can_burn() {
     [Pair(own_policy_id, [Pair(#"", -1), Pair(#"abcd", -3)])]
       |> value.from_asset_list()
       |> value.to_minted_value()
-  mint_logic(own_policy_id, utxo_ref, inputs, minted_value)
+  mint_validator(own_policy_id, utxo_ref, inputs, minted_value)
 }
 
 test cant_double_mint() fail {
@@ -106,5 +106,5 @@ test cant_double_mint() fail {
     [Pair(own_policy_id, [Pair(#"", 1), Pair(#"abcd", 3)])]
       |> value.from_asset_list()
       |> value.to_minted_value()
-  mint_logic(own_policy_id, utxo_ref, inputs, minted_value)
+  mint_validator(own_policy_id, utxo_ref, inputs, minted_value)
 }
