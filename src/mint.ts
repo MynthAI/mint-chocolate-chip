@@ -89,6 +89,8 @@ const program = new Command()
     txs.push(mintTx);
 
     for (const tx of txs) console.log((await tx.complete()).toCBOR());
+
+    console.log(`\nReference: ${refScript.txHash}`);
   });
 
 const validate = <T, U>(validator: Type<T, U>, data: unknown) => {
