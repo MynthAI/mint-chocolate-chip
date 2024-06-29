@@ -1,17 +1,10 @@
 import { Blockfrost as CardanoBlockfrost, Wallet } from "@cardano-ts/node";
-import {
-  Blockfrost,
-  Data,
-  Lucid,
-  mintingPolicyToId,
-  Network,
-} from "@lucid-evolution/lucid";
+import { Data, mintingPolicyToId } from "@lucid-evolution/lucid";
 import { Command } from "commander";
 import { Problem } from "ts-handling";
 import { Address, Amount, Config, logThenExit, TxId, validate } from "./inputs";
+import { loadLucid } from "./lucid";
 import { loadPlutus } from "./script";
-
-const expiresIn = 600000; // About 10 minutes
 
 const program = new Command()
   .name("burns")
@@ -33,13 +26,7 @@ const program = new Command()
     const plutus = (await loadPlutus()).unwrap();
     if (plutus instanceof Problem) return logThenExit(plutus.error);
 
-    const lucid = await Lucid(
-      new Blockfrost(
-        `https://cardano-${blockfrost.network}.blockfrost.io/api/v0`,
-        projectId
-      ),
-      convertNetwork(blockfrost)
-    );
+    const lucid = await loadLucid(projectId);
     lucid.selectWallet.fromAddress(wallet.address, wallet.utxos);
 
     const refScripts = await lucid.utxosByOutRef([
@@ -57,23 +44,11 @@ const program = new Command()
 
     const tx = lucid
       .newTx()
-      .validTo(Date.now() + expiresIn)
       .mintAssets({ [token]: amount * -1n }, Data.void())
       .readFrom([refScript]);
 
     const completed = await (await tx.complete()).complete();
     console.log(completed.toCBOR());
   });
-
-const convertNetwork = (blockfrost: CardanoBlockfrost) => {
-  const network = blockfrost.network;
-  type CardanoNetwork = typeof network;
-  const networks: Record<CardanoNetwork, Network> = {
-    mainnet: "Mainnet",
-    preprod: "Preprod",
-    preview: "Preview",
-  };
-  return networks[network];
-};
 
 program.parseAsync(process.argv);

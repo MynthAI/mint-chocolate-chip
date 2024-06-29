@@ -1,9 +1,7 @@
 import { Blockfrost as CardanoBlockfrost, Wallet } from "@cardano-ts/node";
 import {
   applyParamsToScript,
-  Blockfrost,
   Data,
-  Lucid,
   MintingPolicy,
   mintingPolicyToId,
   Network,
@@ -12,6 +10,7 @@ import {
   validatorToAddress,
 } from "@lucid-evolution/lucid";
 import { Command } from "commander";
+import { loadLucid } from "lucid";
 import { Problem } from "ts-handling";
 import {
   Address,
@@ -22,8 +21,6 @@ import {
   validate,
 } from "./inputs";
 import { loadPlutus } from "./script";
-
-const expiresIn = 600000; // About 10 minutes
 
 const program = new Command()
   .name("mint")
@@ -47,18 +44,11 @@ const program = new Command()
 
     const network = convertNetwork(blockfrost);
     const txs: TxSignBuilder[] = [];
-    const lucid = await Lucid(
-      new Blockfrost(
-        `https://cardano-${blockfrost.network}.blockfrost.io/api/v0`,
-        projectId
-      ),
-      convertNetwork(blockfrost)
-    );
+    const lucid = await loadLucid(projectId);
     lucid.selectWallet.fromAddress(wallet.address, wallet.utxos);
 
     const setup = lucid
       .newTx()
-      .validTo(Date.now() + expiresIn)
       .pay.ToAddress(wallet.address, { lovelace: 2000000n });
     const [[ref, ...setupUtxos], , setupTx] = await setup.chain();
     lucid.selectWallet.fromAddress(wallet.address, setupUtxos);
@@ -70,7 +60,6 @@ const program = new Command()
     const token = policy + name;
     const deploy = lucid
       .newTx()
-      .validTo(Date.now() + expiresIn)
       .pay.ToContract(
         blackhole,
         { kind: "inline", value: Data.void() },
@@ -84,7 +73,6 @@ const program = new Command()
 
     const tx = lucid
       .newTx()
-      .validTo(Date.now() + expiresIn)
       .mintAssets({ [token]: amount }, Data.void())
       .readFrom([refScript])
       .collectFrom([ref]);
