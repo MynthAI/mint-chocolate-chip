@@ -1,5 +1,5 @@
-import { Blockfrost as CardanoBlockfrost, Wallet } from "@cardano-ts/node";
 import { Blockfrost, Lucid, Network } from "@lucid-evolution/lucid";
+import { Blockfrost as CardanoBlockfrost, Wallet } from "cardano-ts";
 
 const expiresIn = 600000; // About 10 minutes
 
