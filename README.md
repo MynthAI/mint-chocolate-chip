@@ -196,6 +196,16 @@ By following these steps, you can generate and submit the necessary
 metadata to have your token recognized and included in the Cardano Token
 Registry.
 
+To edit existing metadata, you can use the `--edit` flag:
+
+``` shell
+bash metadata.sh --edit
+```
+
+This will pause the script before signing you you can edit the
+`.json.draft` file. After finished, press enter and the final json file
+will be generated and signed.
+
 ## License
 
 This project is licensed under the GNU Lesser General Public License
