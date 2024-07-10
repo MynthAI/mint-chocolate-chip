@@ -28,6 +28,11 @@ token-metadata-creator entry \
   --logo "$logo" \
   --decimals "$decimals"
 
+if [[ " $* " == *" --edit "* ]]; then
+  echo "Press enter to continue..."
+  read -r
+fi
+
 token-metadata-creator entry \
   "$subject" -a sign.skey
 
