@@ -17,11 +17,11 @@ import { Command } from "commander";
 import { chunk } from "es-toolkit/array";
 import { isProblem, mayFail, Problem } from "ts-handling";
 import { loadLucid } from "wallet";
-import { Config, logThenExit, validate } from "./inputs";
+import { Config, logThenExit, Options, validate } from "./inputs";
 import { loadPlutus } from "./script";
 import { getNetwork, loadWalletFromSeed } from "./wallet";
 
-const amountPerTx = 90;
+const amountPerTx = 45;
 
 const program = new Command()
   .name("distribute")
@@ -32,12 +32,17 @@ const program = new Command()
     "<filename>",
     "The filename containing the list of addresses to send tokens to"
   )
-  .action(async ($filename) => {
+  .option(
+    "-m, --metadata <key-values...>",
+    "Additional metadata to attach to the token, in the format of `name:value`"
+  )
+  .action(async ($filename, $options: object) => {
     const config = validate(Config, process.env);
     const projectId = config.BLOCKFROST_API_KEY;
     const lucid = await loadLucid(projectId);
     const addresses = validate(Addresses(lucid.config().network), $filename);
     const amount = addresses.length;
+    const options = validate(Options, $options);
 
     const seed = await password({ message: "Enter your seed phrase" });
     if (!seed) return logThenExit("No seed phrase provided");
@@ -91,6 +96,20 @@ const program = new Command()
       const ref = refs[i];
       lucid.selectWallet.fromAddress(wallet.address, [ref]);
       const tx = lucid.newTx().readFrom([refScript]);
+
+      if (options.metadata) {
+        const metadata = options.metadata;
+        const data = tokens.reduce<Record<string, Record<string, string>>>(
+          (tokens, token) => {
+            tokens[token.substring(56)] = metadata;
+            return tokens;
+          },
+          {}
+        );
+        tx.attachMetadata(721, {
+          [policy]: data,
+        });
+      }
 
       for (const [j, token] of tokens.entries())
         tx.mintAssets({ [token]: 1n }, Data.void()).pay.ToAddress(
