@@ -32,8 +32,34 @@ const TxId = type("string==64")
   .pipe((s) => s.toLowerCase())
   .narrow((s, ctx) => /^[0-9A-Fa-f]+$/g.test(s) || ctx.mustBe("tx ID"));
 
+const Metadata = type(/^[a-zA-Z0-9]+:(.+)$/)
+  .array()
+  .pipe((values) =>
+    values.reduce<Record<string, string>>((metadata, keyValue) => {
+      const [name, ...value] = keyValue.split(":");
+      metadata[name] = value.join(":");
+      return metadata;
+    }, {})
+  );
+
+const Options = type({
+  "metadata?": Metadata,
+}).pipe((options) => {
+  return { metadata: options.metadata };
+});
+type Options = typeof Options.infer;
+
 const Config = type({
   BLOCKFROST_API_KEY: "string==39",
 });
 
-export { Address, Amount, Config, logThenExit, TokenName, TxId, validate };
+export {
+  Address,
+  Amount,
+  Config,
+  logThenExit,
+  Options,
+  TokenName,
+  TxId,
+  validate,
+};
