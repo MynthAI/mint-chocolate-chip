@@ -9,6 +9,7 @@ import {
   UTxO,
   validatorToAddress,
 } from "@lucid-evolution/lucid";
+import { Seed } from "cardano-ts";
 import { Command } from "commander";
 import { chunk } from "es-toolkit/array";
 import { Problem } from "ts-handling";
@@ -41,6 +42,10 @@ const program = new Command()
     const txs: TxSignBuilder[] = [];
     const lucid = await loadLucid(projectId);
     lucid.selectWallet.fromAddress(wallet.address, wallet.utxos);
+    const key = new Seed(
+      seed,
+      lucid.config().network === "Mainnet" ? "mainnet" : "testnet"
+    ).getPrivateKey();
 
     const chunks = chunk(Array.from({ length: Number(amount) }), amountPerTx);
     const setup = lucid.newTx();
@@ -78,9 +83,11 @@ const program = new Command()
       txs.push(mintTx);
     }
 
-    for (const tx of txs) console.log((await tx.complete()).toCBOR());
-
-    console.log(`\nReference: ${refScript.txHash}`);
+    for (const tx of txs) {
+      const completed = await tx.sign.withPrivateKey(key).complete();
+      const submitted = await completed.submit();
+      console.log(`Submitted ${submitted}`);
+    }
   });
 
 const createScript = (plutus: string, ref: UTxO): MintingPolicy => {
