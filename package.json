@@ -23,6 +23,7 @@
     "cardano-ts": "^0.2.0",
     "commander": "^12.1.0",
     "es-toolkit": "^1.16.0",
+    "inquirer": "^10.1.8",
     "ts-handling": "^0.2.0"
   },
   "devDependencies": {

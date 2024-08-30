@@ -1,3 +1,4 @@
+import { password } from "@inquirer/prompts";
 import {
   applyParamsToScript,
   Data,
@@ -12,24 +13,25 @@ import { Command } from "commander";
 import { chunk } from "es-toolkit/array";
 import { Problem } from "ts-handling";
 import { loadLucid } from "wallet";
-import { Address, Amount, Config, logThenExit, validate } from "./inputs";
+import { Amount, Config, logThenExit, validate } from "./inputs";
 import { loadPlutus } from "./script";
-import { getNetwork, loadWallet } from "./wallet";
+import { getNetwork, loadWalletFromSeed } from "./wallet";
 
 const amountPerTx = 50;
 
 const program = new Command()
   .name("nft")
   .description("Mints NFTs. Each NFT will have a unique name.")
-  .argument("<address>", "The address of the wallet performing the mint")
   .argument("<amount>", "The amount of tokens to mint")
-  .action(async ($address, $amount) => {
-    const address = validate(Address, $address);
+  .action(async ($amount) => {
     const amount = validate(Amount, $amount);
     const config = validate(Config, process.env);
 
+    const seed = await password({ message: "Enter your seed phrase" });
+    if (!seed) return logThenExit("No seed phrase provided");
+
     const projectId = config.BLOCKFROST_API_KEY;
-    const wallet = await loadWallet(projectId, address);
+    const wallet = await loadWalletFromSeed(projectId, seed);
     if (!wallet.utxos.length) return logThenExit("Wallet must be funded");
 
     const plutus = (await loadPlutus("multiple.mint")).unwrap();
