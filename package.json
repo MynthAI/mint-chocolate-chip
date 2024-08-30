@@ -12,6 +12,7 @@
   "scripts": {
     "build": "concurrently \"aiken build\" \"npx tsc\"",
     "mint": "npx tsx src/mint.ts",
+    "nft": "npx tsx src/nft.ts",
     "burn": "npx tsx src/burn.ts",
     "prettier": "npx prettier -w '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'",
     "lint": "concurrently \"npx prettier --check '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'\" \"npx eslint . --max-warnings=0\""
@@ -21,6 +22,7 @@
     "arktype": "^2.0.0-dev.26",
     "cardano-ts": "^0.2.0",
     "commander": "^12.1.0",
+    "es-toolkit": "^1.16.0",
     "ts-handling": "^0.2.0"
   },
   "devDependencies": {
