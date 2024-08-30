@@ -14,7 +14,9 @@ const logThenExit = (message: string): never => {
 
 const Address = type("string");
 
-const TokenName = type("string<=20").pipe((s) => fromText(s));
+const TokenName = type("string")
+  .pipe((s) => fromText(s))
+  .narrow((v, ctx) => v.length <= 64 || ctx.mustBe("no more than 32 bytes"));
 
 const Amount = type("string")
   .pipe((s, ctx) => {
