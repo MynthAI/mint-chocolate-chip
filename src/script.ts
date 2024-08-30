@@ -4,21 +4,28 @@ import { fileURLToPath } from "url";
 import { type } from "arktype";
 import { Err, Ok, Result } from "ts-handling";
 
+const Validators = ["mint.mint", "multiple.mint"] as const;
+type Validator = (typeof Validators)[number];
 const here = dirname(fileURLToPath(import.meta.url));
 
 const Plutus = type({
-  validators: [
-    {
-      compiledCode: "string",
-    },
-  ],
-}).pipe((v) => v.validators[0].compiledCode);
+  validators: type({ title: ["===", ...Validators], compiledCode: "string" })
+    .array()
+    .exactlyLength(2),
+}).pipe((v) =>
+  v.validators.reduce((validators, validator) => {
+    validators[validator.title] = validator.compiledCode;
+    return validators;
+  }, {} as Record<Validator, string>)
+);
 
-const loadPlutus = async (): Promise<Result<string, string>> => {
+const loadPlutus = async (
+  validator: Validator = "mint.mint"
+): Promise<Result<string, string>> => {
   const plutusPath = join(here, "..", "plutus.json");
   const plutus = Plutus(JSON.parse(await fs.readFile(plutusPath, "utf8")));
   if (plutus instanceof type.errors) return Err(plutus.summary);
-  return Ok(plutus);
+  return Ok(plutus[validator]);
 };
 
 export { loadPlutus };
