@@ -93,9 +93,10 @@ const program = new Command()
       const tx = lucid.newTx().readFrom([refScript]);
 
       for (const [j, token] of tokens.entries())
-        tx
-          .mintAssets({ [token]: 1n }, Data.void())
-          .pay.ToAddress(addresses[j], { [token]: 1n });
+        tx.mintAssets({ [token]: 1n }, Data.void()).pay.ToAddress(
+          addresses[j],
+          { [token]: 1n }
+        );
 
       const [, , mintTx] = await tx.chain();
       txs.push(mintTx);
