@@ -18,7 +18,7 @@ import { Amount, Config, logThenExit, validate } from "./inputs";
 import { loadPlutus } from "./script";
 import { getNetwork, loadWalletFromSeed } from "./wallet";
 
-const amountPerTx = 50;
+const amountPerTx = 220;
 
 const program = new Command()
   .name("nft")
