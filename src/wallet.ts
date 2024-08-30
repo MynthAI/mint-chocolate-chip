@@ -6,6 +6,9 @@ const expiresIn = 600000; // About 10 minutes
 const loadWallet = (projectId: string, address: string) =>
   Wallet.fromAddress(new CardanoBlockfrost(projectId), address);
 
+const loadWalletFromSeed = (projectId: string, seed: string) =>
+  Wallet.fromSeed(new CardanoBlockfrost(projectId), seed);
+
 const loadLucid = async (projectId: string) => {
   const blockfrost = new CardanoBlockfrost(projectId);
   const lucid = await Lucid(
@@ -33,4 +36,4 @@ const getNetwork = (projectId: string) => {
   return networks[network];
 };
 
-export { getNetwork, loadLucid, loadWallet };
+export { getNetwork, loadLucid, loadWallet, loadWalletFromSeed };
