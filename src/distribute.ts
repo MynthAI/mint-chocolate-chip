@@ -21,7 +21,7 @@ import { Config, logThenExit, validate } from "./inputs";
 import { loadPlutus } from "./script";
 import { getNetwork, loadWalletFromSeed } from "./wallet";
 
-const amountPerTx = 220;
+const amountPerTx = 90;
 
 const program = new Command()
   .name("distribute")
