@@ -110,6 +110,7 @@ const Addresses = (network: Network) =>
     if (isProblem(data)) return ctx.error("valid filename");
 
     const addresses = data.split(/\r?\n/).filter((line) => line.trim() !== "");
+    const stakeKeys: Record<string, string> = {};
 
     for (const address of addresses) {
       const details = mayFail(() => getAddressDetails(address)).unwrap();
@@ -120,6 +121,12 @@ const Addresses = (network: Network) =>
           return "valid address with payment credential";
         if (!details.stakeCredential)
           return "valid address with stake credential";
+
+        const key = details.stakeCredential.hash;
+        if (key in stakeKeys)
+          console.error("duplicate:", address, stakeKeys[key]);
+
+        stakeKeys[key] = address;
       })();
 
       if (error) return ctx.error(`${error}; error with ${address}`);
