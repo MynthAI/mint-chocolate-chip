@@ -71,6 +71,7 @@ const program = new Command()
     const script = createScript(plutus, refs[0]);
     const policy = mintingPolicyToId(script);
     const tokenChunks = chunk(generateTokens(policy, amount), amountPerTx);
+    const addressChunks = chunk(addresses, amountPerTx);
 
     const deploy = lucid
       .newTx()
@@ -86,11 +87,15 @@ const program = new Command()
 
     for (let i = 0; i < tokenChunks.length; i++) {
       const tokens = tokenChunks[i];
+      const addresses = addressChunks[i];
       const ref = refs[i];
       lucid.selectWallet.fromAddress(wallet.address, [ref]);
       const tx = lucid.newTx().readFrom([refScript]);
 
-      for (const token of tokens) tx.mintAssets({ [token]: 1n }, Data.void());
+      for (const [j, token] of tokens.entries())
+        tx
+          .mintAssets({ [token]: 1n }, Data.void())
+          .pay.ToAddress(addresses[j], { [token]: 1n });
 
       const [, , mintTx] = await tx.chain();
       txs.push(mintTx);
