@@ -48,16 +48,18 @@ const program = new Command()
     ).getPrivateKey();
 
     const chunks = chunk(Array.from({ length: Number(amount) }), amountPerTx);
-    const setup = lucid.newTx();
+    const setup = lucid
+      .newTx()
+      .pay.ToAddress(wallet.address, { lovelace: 200000000n });
     chunks.forEach(() =>
-      setup.pay.ToAddress(wallet.address, { lovelace: 2000000n })
+      setup.pay.ToAddress(wallet.address, { lovelace: 200000000n })
     );
-    const [[ref, ...setupUtxos], , setupTx] = await setup.chain();
-    lucid.selectWallet.fromAddress(wallet.address, setupUtxos);
+    const [[setupUtxo, ...refs], , setupTx] = await setup.chain();
+    lucid.selectWallet.fromAddress(wallet.address, [setupUtxo]);
     txs.push(setupTx);
 
     const blackhole = createBlackholeAddress(network);
-    const script = createScript(plutus, ref);
+    const script = createScript(plutus, refs[0]);
     const policy = mintingPolicyToId(script);
     const tokenChunks = chunk(generateTokens(policy, amount), amountPerTx);
 
@@ -69,13 +71,15 @@ const program = new Command()
         undefined,
         script
       );
-    const [deployUtxos, [refScript], deployTx] = await deploy.chain();
+    const [, [refScript], deployTx] = await deploy.chain();
     if (!refScript.scriptRef) return logThenExit("Script didn't deploy");
-    lucid.selectWallet.fromAddress(wallet.address, deployUtxos);
     txs.push(deployTx);
 
-    for (const tokens of tokenChunks) {
-      const tx = lucid.newTx().readFrom([refScript]).collectFrom([ref]);
+    for (let i = 0; i < tokenChunks.length; i++) {
+      const tokens = tokenChunks[i];
+      const ref = refs[i];
+      lucid.selectWallet.fromAddress(wallet.address, [ref]);
+      const tx = lucid.newTx().readFrom([refScript]);
 
       for (const token of tokens) tx.mintAssets({ [token]: 1n }, Data.void());
 
