@@ -30,7 +30,7 @@ const Amount = type("string")
 
 const TxId = type("string==64")
   .pipe((s) => s.toLowerCase())
-  .narrow((s, ctx) => /^[0-9A-Fa-f]+$/g.test(s) || ctx.mustBe("tx ID"));
+  .narrow((s, ctx) => /^[0-9A-Fa-f]+$/.test(s) || ctx.mustBe("tx ID"));
 
 const Metadata = type(/^[a-zA-Z0-9]+:(.+)$/)
   .array()
