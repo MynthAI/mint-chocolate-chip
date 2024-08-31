@@ -182,13 +182,21 @@ const createBlackholeAddress = (network: Network) => {
   });
 };
 
-const generateTokens = (policy: string, amount: number) =>
-  Array.from({ length: amount }).map(
-    () =>
+const Hex = "0123456789abcdef";
+
+const generateTokens = (policy: string, amount: number, length: number = 4) => {
+  const names = new Set<string>();
+
+  while (names.size < amount)
+    names.add(
       policy +
-      [...Array(64)]
-        .map(() => Math.floor(Math.random() * 16).toString(16))
-        .join("")
-  );
+        Array.from(
+          { length },
+          () => Hex[Math.floor(Math.random() * Hex.length)]
+        ).join("")
+    );
+
+  return [...names];
+};
 
 program.parseAsync(process.argv);
