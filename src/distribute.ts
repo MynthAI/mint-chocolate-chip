@@ -14,6 +14,7 @@ import {
 import { type } from "arktype";
 import { Seed } from "cardano-ts";
 import { Command } from "commander";
+import Decimal from "decimal.js";
 import { chunk } from "es-toolkit/array";
 import { isProblem, mayFail, Problem } from "ts-handling";
 import { loadLucid } from "wallet";
@@ -102,15 +103,16 @@ const program = new Command()
       lucid.selectWallet.fromAddress(wallet.address, [ref]);
       const tx = lucid.newTx().readFrom([refScript]);
       const metadata = options.metadata || {};
-      const data = tokens.reduce<
-        Record<string, Record<string, string | number>>
-      >((tokens, token) => {
-        tokens[token.substring(56)] = metadata;
-        return tokens;
-      }, {});
+      const data = tokens.reduce<Record<string, Record<string, string>>>(
+        (tokens, token) => {
+          tokens[token.substring(56)] = metadata;
+          return tokens;
+        },
+        {}
+      );
 
       for (const [j, token] of tokens.entries()) {
-        data[token.substring(56)].amount = Number(amounts[j]);
+        data[token.substring(56)].amount = amounts[j];
         tx.mintAssets({ [token]: 1n }, Data.void()).pay.ToAddress(
           addresses[j],
           { [token]: 1n }
@@ -143,7 +145,11 @@ const Addresses = (network: Network) =>
     const lines = data.split(/\r?\n/).filter((line) => line.trim() !== "");
     const addresses = lines.map((line) => line.split(",")[0]);
     const amounts = mayFail(() =>
-      lines.map((line) => BigInt(line.split(",")[1]))
+      lines.map((line) =>
+        new Decimal(BigInt(line.split(",")[1]).toString())
+          .div(10 ** 6)
+          .toFixed(6)
+      )
     ).unwrap();
     if (isProblem(amounts)) return ctx.error("valid numbers in csv");
     const stakeKeys: Record<string, string> = {};
