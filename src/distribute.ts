@@ -134,7 +134,10 @@ const Addresses = (network: Network) =>
     const data = mayFail(() => readFileSync(v, "utf8")).unwrap();
     if (isProblem(data)) return ctx.error("valid filename");
 
-    const addresses = data.split(/\r?\n/).filter((line) => line.trim() !== "");
+    const addresses = data
+      .split(/\r?\n/)
+      .filter((line) => line.trim() !== "")
+      .map((line) => line.split(",")[0]);
     const stakeKeys: Record<string, string> = {};
 
     for (const address of addresses) {
