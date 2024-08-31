@@ -41,11 +41,11 @@ const program = new Command()
     const config = validate(Config, process.env);
     const projectId = config.BLOCKFROST_API_KEY;
     const lucid = await loadLucid(projectId);
-    const { addresses, amounts } = validate(
+    const distributions = validate(
       Addresses(lucid.config().network),
       $filename
     );
-    const amount = addresses.length;
+    const amount = distributions.length;
     const options = validate(Options, $options);
 
     const seed = await password({ message: "Enter your seed phrase" });
@@ -80,8 +80,7 @@ const program = new Command()
     const script = createScript(plutus, refs[0]);
     const policy = mintingPolicyToId(script);
     const tokenChunks = chunk(generateTokens(policy, amount), amountPerTx);
-    const addressChunks = chunk(addresses, amountPerTx);
-    const amountChunks = chunk(amounts, amountPerTx);
+    const distributionChunks = chunk(distributions, amountPerTx);
 
     const deploy = lucid
       .newTx()
@@ -97,8 +96,7 @@ const program = new Command()
 
     for (let i = 0; i < tokenChunks.length; i++) {
       const tokens = tokenChunks[i];
-      const addresses = addressChunks[i];
-      const amounts = amountChunks[i];
+      const distribution = distributionChunks[i];
       const ref = refs[i];
       lucid.selectWallet.fromAddress(wallet.address, [ref]);
       const tx = lucid.newTx().readFrom([refScript]);
@@ -112,11 +110,11 @@ const program = new Command()
       );
 
       for (const [j, token] of tokens.entries()) {
-        data[token.substring(56)].amount = amounts[j];
-        tx.mintAssets({ [token]: 1n }, Data.void()).pay.ToAddress(
-          addresses[j],
-          { [token]: 1n }
-        );
+        const { address, amount } = distribution[j];
+        data[token.substring(56)].amount = amount;
+        tx.mintAssets({ [token]: 1n }, Data.void()).pay.ToAddress(address, {
+          [token]: 1n,
+        });
       }
 
       if (options.metadata) {
@@ -178,7 +176,12 @@ const Addresses = (network: Network) =>
     if (addresses.length != amounts.length)
       return ctx.error("a list of addresses with amounts");
 
-    return { addresses, amounts };
+    return addresses.map((address, index) => {
+      return {
+        address,
+        amount: amounts[index],
+      };
+    });
   });
 
 const createScript = (plutus: string, ref: UTxO): MintingPolicy => {
