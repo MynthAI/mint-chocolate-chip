@@ -40,7 +40,10 @@ const program = new Command()
     const config = validate(Config, process.env);
     const projectId = config.BLOCKFROST_API_KEY;
     const lucid = await loadLucid(projectId);
-    const addresses = validate(Addresses(lucid.config().network), $filename);
+    const { addresses } = validate(
+      Addresses(lucid.config().network),
+      $filename
+    );
     const amount = addresses.length;
     const options = validate(Options, $options);
 
@@ -134,10 +137,12 @@ const Addresses = (network: Network) =>
     const data = mayFail(() => readFileSync(v, "utf8")).unwrap();
     if (isProblem(data)) return ctx.error("valid filename");
 
-    const addresses = data
-      .split(/\r?\n/)
-      .filter((line) => line.trim() !== "")
-      .map((line) => line.split(",")[0]);
+    const lines = data.split(/\r?\n/).filter((line) => line.trim() !== "");
+    const addresses = lines.map((line) => line.split(",")[0]);
+    const amounts = mayFail(() =>
+      lines.map((line) => BigInt(line.split(",")[1]))
+    ).unwrap();
+    if (isProblem(amounts)) return ctx.error("valid numbers in csv");
     const stakeKeys: Record<string, string> = {};
 
     for (const address of addresses) {
@@ -161,8 +166,10 @@ const Addresses = (network: Network) =>
     }
 
     if (!addresses.length) return ctx.error("a list of addresses");
+    if (addresses.length != amounts.length)
+      return ctx.error("a list of addresses with amounts");
 
-    return addresses;
+    return { addresses, amounts };
   });
 
 const createScript = (plutus: string, ref: UTxO): MintingPolicy => {
