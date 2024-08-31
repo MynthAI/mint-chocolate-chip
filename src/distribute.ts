@@ -111,7 +111,7 @@ const program = new Command()
 
       for (const [j, token] of tokens.entries()) {
         const { address, amount } = distribution[j];
-        data[token.substring(56)].amount = amount;
+        data[token.substring(56)] = {...data[token.substring(56)], amount};
         tx.mintAssets({ [token]: 1n }, Data.void()).pay.ToAddress(address, {
           [token]: 1n,
         });
