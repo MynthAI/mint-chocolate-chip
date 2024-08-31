@@ -40,7 +40,7 @@ const program = new Command()
     const config = validate(Config, process.env);
     const projectId = config.BLOCKFROST_API_KEY;
     const lucid = await loadLucid(projectId);
-    const { addresses } = validate(
+    const { addresses, amounts } = validate(
       Addresses(lucid.config().network),
       $filename
     );
@@ -80,6 +80,7 @@ const program = new Command()
     const policy = mintingPolicyToId(script);
     const tokenChunks = chunk(generateTokens(policy, amount), amountPerTx);
     const addressChunks = chunk(addresses, amountPerTx);
+    const amountChunks = chunk(amounts, amountPerTx);
 
     const deploy = lucid
       .newTx()
@@ -96,29 +97,31 @@ const program = new Command()
     for (let i = 0; i < tokenChunks.length; i++) {
       const tokens = tokenChunks[i];
       const addresses = addressChunks[i];
+      const amounts = amountChunks[i];
       const ref = refs[i];
       lucid.selectWallet.fromAddress(wallet.address, [ref]);
       const tx = lucid.newTx().readFrom([refScript]);
+      const metadata = options.metadata || {};
+      const data = tokens.reduce<
+        Record<string, Record<string, string | number>>
+      >((tokens, token) => {
+        tokens[token.substring(56)] = metadata;
+        return tokens;
+      }, {});
 
-      if (options.metadata) {
-        const metadata = options.metadata;
-        const data = tokens.reduce<Record<string, Record<string, string>>>(
-          (tokens, token) => {
-            tokens[token.substring(56)] = metadata;
-            return tokens;
-          },
-          {}
-        );
-        tx.attachMetadata(721, {
-          [policy]: data,
-        });
-      }
-
-      for (const [j, token] of tokens.entries())
+      for (const [j, token] of tokens.entries()) {
+        data[token.substring(56)].amount = Number(amounts[j]);
         tx.mintAssets({ [token]: 1n }, Data.void()).pay.ToAddress(
           addresses[j],
           { [token]: 1n }
         );
+      }
+
+      if (options.metadata) {
+        tx.attachMetadata(721, {
+          [policy]: data,
+        });
+      }
 
       const [, , mintTx] = await tx.chain();
       txs.push(mintTx);
