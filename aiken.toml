@@ -1,4 +1,5 @@
 name = "sundae/mint-chocolate-chip"
+compiler = "v1.0.29-alpha"
 version = "0.0.0"
 license = "Apache-2.0"
 description = "Aiken contracts for project 'sundae/mint-chocolate-chip'"

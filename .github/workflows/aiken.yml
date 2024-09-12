@@ -18,7 +18,7 @@ jobs:
       - name: Install Aiken
         run: |
           curl -sSfL https://install.aiken-lang.org | bash
-          ~/.aiken/bin/aikup
+          ~/.aiken/bin/aikup install v1.0.29-alpha
           sudo ln -s ~/.aiken/bin/aiken /usr/local/bin/aiken
 
       - name: Run tests
