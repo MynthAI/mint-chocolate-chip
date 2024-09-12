@@ -1,7 +1,15 @@
 import { fromText } from "@lucid-evolution/lucid";
-import { type, Type } from "arktype";
+import { type } from "arktype";
 
-const validate = <T, U>(validator: Type<T, U>, data: unknown) => {
+type AnyType = {
+  (data: unknown): unknown;
+  infer: unknown;
+};
+
+const validate = <T extends AnyType>(
+  validator: T,
+  data: unknown
+): T["infer"] => {
   const result = validator(data);
   if (result instanceof type.errors) return logThenExit(result.summary);
   return result;
