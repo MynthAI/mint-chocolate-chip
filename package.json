@@ -19,9 +19,9 @@
     "lint": "concurrently \"npx prettier --check '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'\" \"npx eslint . --max-warnings=0\""
   },
   "dependencies": {
-    "@lucid-evolution/lucid": "^0.3.11",
+    "@lucid-evolution/lucid": "^0.3.36",
     "arktype": "^2.0.0-rc.6",
-    "cardano-ts": "^0.2.0",
+    "cardano-ts": "^0.3.2",
     "commander": "^12.1.0",
     "es-toolkit": "^1.16.0",
     "inquirer": "^10.1.8",
