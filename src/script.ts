@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { applyDoubleCborEncoding } from "@lucid-evolution/lucid";
 import { type } from "arktype";
 import { Err, Ok, Result } from "ts-handling";
 
@@ -25,7 +26,7 @@ const loadPlutus = async (
   const plutusPath = join(here, "..", "plutus.json");
   const plutus = Plutus(JSON.parse(await fs.readFile(plutusPath, "utf8")));
   if (plutus instanceof type.errors) return Err(plutus.summary);
-  return Ok(plutus[validator]);
+  return Ok(applyDoubleCborEncoding(plutus[validator]));
 };
 
 export { loadPlutus };
