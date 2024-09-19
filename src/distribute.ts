@@ -14,6 +14,7 @@ import {
 import { type } from "arktype";
 import { Seed } from "cardano-ts";
 import { Command } from "commander";
+import Decimal from "decimal.js";
 import { chunk } from "es-toolkit/array";
 import { isProblem, mayFail, Problem } from "ts-handling";
 import { loadLucid } from "wallet";
@@ -21,7 +22,7 @@ import { Config, logThenExit, Options, validate } from "./inputs";
 import { loadPlutus } from "./script";
 import { getNetwork, loadWalletFromSeed } from "./wallet";
 
-const amountPerTx = 45;
+const amountPerTx = 65;
 
 const program = new Command()
   .name("distribute")
@@ -40,8 +41,11 @@ const program = new Command()
     const config = validate(Config, process.env);
     const projectId = config.BLOCKFROST_API_KEY;
     const lucid = await loadLucid(projectId);
-    const addresses = validate(Addresses(lucid.config().network), $filename);
-    const amount = addresses.length;
+    const distributions = validate(
+      Addresses(lucid.config().network),
+      $filename
+    );
+    const amount = distributions.length;
     const options = validate(Options, $options);
 
     const seed = await password({ message: "Enter your seed phrase" });
@@ -76,7 +80,7 @@ const program = new Command()
     const script = createScript(plutus, refs[0]);
     const policy = mintingPolicyToId(script);
     const tokenChunks = chunk(generateTokens(policy, amount), amountPerTx);
-    const addressChunks = chunk(addresses, amountPerTx);
+    const distributionChunks = chunk(distributions, amountPerTx);
 
     const deploy = lucid
       .newTx()
@@ -92,30 +96,32 @@ const program = new Command()
 
     for (let i = 0; i < tokenChunks.length; i++) {
       const tokens = tokenChunks[i];
-      const addresses = addressChunks[i];
+      const distribution = distributionChunks[i];
       const ref = refs[i];
       lucid.selectWallet.fromAddress(wallet.address, [ref]);
       const tx = lucid.newTx().readFrom([refScript]);
+      const metadata = options.metadata || {};
+      const data = tokens.reduce<Record<string, Record<string, string>>>(
+        (tokens, token) => {
+          tokens[token.substring(56)] = metadata;
+          return tokens;
+        },
+        {}
+      );
+
+      for (const [j, token] of tokens.entries()) {
+        const { address, amount } = distribution[j];
+        data[token.substring(56)] = { ...data[token.substring(56)], amount };
+        tx.mintAssets({ [token]: 1n }, Data.void()).pay.ToAddress(address, {
+          [token]: 1n,
+        });
+      }
 
       if (options.metadata) {
-        const metadata = options.metadata;
-        const data = tokens.reduce<Record<string, Record<string, string>>>(
-          (tokens, token) => {
-            tokens[token.substring(56)] = metadata;
-            return tokens;
-          },
-          {}
-        );
         tx.attachMetadata(721, {
           [policy]: data,
         });
       }
-
-      for (const [j, token] of tokens.entries())
-        tx.mintAssets({ [token]: 1n }, Data.void()).pay.ToAddress(
-          addresses[j],
-          { [token]: 1n }
-        );
 
       const [, , mintTx] = await tx.chain();
       txs.push(mintTx);
@@ -134,7 +140,16 @@ const Addresses = (network: Network) =>
     const data = mayFail(() => readFileSync(v, "utf8")).unwrap();
     if (isProblem(data)) return ctx.error("valid filename");
 
-    const addresses = data.split(/\r?\n/).filter((line) => line.trim() !== "");
+    const lines = data.split(/\r?\n/).filter((line) => line.trim() !== "");
+    const addresses = lines.map((line) => line.split(",")[0]);
+    const amounts = mayFail(() =>
+      lines.map((line) =>
+        new Decimal(BigInt(line.split(",")[1]).toString())
+          .div(10 ** 6)
+          .toFixed(6)
+      )
+    ).unwrap();
+    if (isProblem(amounts)) return ctx.error("valid numbers in csv");
     const stakeKeys: Record<string, string> = {};
 
     for (const address of addresses) {
@@ -158,8 +173,15 @@ const Addresses = (network: Network) =>
     }
 
     if (!addresses.length) return ctx.error("a list of addresses");
+    if (addresses.length != amounts.length)
+      return ctx.error("a list of addresses with amounts");
 
-    return addresses;
+    return addresses.map((address, index) => {
+      return {
+        address,
+        amount: amounts[index],
+      };
+    });
   });
 
 const createScript = (plutus: string, ref: UTxO): MintingPolicy => {
@@ -182,13 +204,21 @@ const createBlackholeAddress = (network: Network) => {
   });
 };
 
-const generateTokens = (policy: string, amount: number) =>
-  Array.from({ length: amount }).map(
-    () =>
+const Hex = "0123456789abcdef";
+
+const generateTokens = (policy: string, amount: number, length: number = 4) => {
+  const names = new Set<string>();
+
+  while (names.size < amount)
+    names.add(
       policy +
-      [...Array(64)]
-        .map(() => Math.floor(Math.random() * 16).toString(16))
-        .join("")
-  );
+        Array.from(
+          { length },
+          () => Hex[Math.floor(Math.random() * Hex.length)]
+        ).join("")
+    );
+
+  return [...names];
+};
 
 program.parseAsync(process.argv);
