@@ -57,7 +57,7 @@ const program = new Command()
 
     for (const tx of txs) console.log((await tx.complete()).toCBOR());
 
-    console.log(`\Create token: ${token}`);
+    console.log(`\nCreated token: ${token}`);
   });
 
 const createScript = (plutus: string, ref: UTxO): MintingPolicy => {
