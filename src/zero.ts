@@ -52,7 +52,6 @@ const program = new Command()
       .newTx()
       .mintAssets({ [token]: -1n }, Data.void())
       .attach.MintingPolicy(script)
-      .collectFrom([ref])
       .chain();
     txs.push(burnTx);
 
