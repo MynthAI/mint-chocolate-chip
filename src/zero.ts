@@ -57,6 +57,8 @@ const program = new Command()
     txs.push(burnTx);
 
     for (const tx of txs) console.log((await tx.complete()).toCBOR());
+
+    console.log(`\Create token: ${token}`);
   });
 
 const createScript = (plutus: string, ref: UTxO): MintingPolicy => {
