@@ -9,3 +9,5 @@ plutus.json
 sign.*
 *.json.draft
 /[a-f0-9]*.json
+
+.vscode/settings.json
