@@ -21,7 +21,6 @@
   "dependencies": {
     "@lucid-evolution/lucid": "^0.4.29",
     "arktype": "^2.1.29",
-    "cardano-ts": "^0.4.1",
     "commander": "^14.0.3",
     "es-toolkit": "^1.44.0",
     "inquirer": "^13.3.0",
