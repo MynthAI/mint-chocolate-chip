@@ -1,27 +1,26 @@
-use aiken/dict
-use aiken/hash.{Blake2b_256, Hash}
-use aiken/list
-use aiken/transaction.{
-  Input, Mint, OutputReference, ScriptContext, Transaction, TransactionId,
-}
-use aiken/transaction/value.{MintedValue, PolicyId}
+use aiken/collection/dict
+use aiken/collection/list
+use aiken/crypto.{Blake2b_256, Hash}
+use cardano/assets
+use cardano/assets.{PolicyId, Value}
+use cardano/transaction.{Input, OutputReference, Transaction}
 
-validator(tx_id: Hash<Blake2b_256, Transaction>) {
-  fn mint(_redeemer: Data, ctx: ScriptContext) {
-    let reference = TransactionId(tx_id)
-    let ScriptContext(Transaction { inputs, mint, .. }, _) = ctx
-    when ctx.purpose is {
-      Mint(policy) -> mint_validator(policy, reference, inputs, mint)
-      _ -> fail @"This is a minting policy"
-    }
+validator mint(tx_id: Hash<Blake2b_256, Transaction>) {
+  mint(_redeemer, policy: PolicyId, self: Transaction) {
+    let Transaction { inputs, mint, .. } = self
+    mint_validator(policy, tx_id, inputs, mint)
+  }
+
+  else(_) {
+    fail @"This is a minting policy"
   }
 }
 
 fn mint_validator(
   policy: PolicyId,
-  reference: TransactionId,
+  reference: Hash<Blake2b_256, Transaction>,
   inputs: List<Input>,
-  mint: MintedValue,
+  mint: Value,
 ) -> Bool {
   or {
     allow_burn(policy, mint),
@@ -30,10 +29,9 @@ fn mint_validator(
   }
 }
 
-fn allow_burn(policy: PolicyId, mint: MintedValue) -> Bool {
+fn allow_burn(policy: PolicyId, mint: Value) -> Bool {
   mint
-    |> value.from_minted_value()
-    |> value.tokens(policy)
+    |> assets.tokens(policy)
     |> dict.to_pairs()
     |> list.all(
         fn(v) {
@@ -43,12 +41,14 @@ fn allow_burn(policy: PolicyId, mint: MintedValue) -> Bool {
       )
 }
 
-fn allow_mint_only_once(reference: TransactionId, inputs: List<Input>) -> Bool {
+fn allow_mint_only_once(
+  reference: Hash<Blake2b_256, Transaction>,
+  inputs: List<Input>,
+) -> Bool {
   inputs
     |> list.any(
         fn(input) {
-          let Input(OutputReference(id, _), _) = input
-          id == reference
+          input.output_reference.transaction_id == reference
         },
       )
 }

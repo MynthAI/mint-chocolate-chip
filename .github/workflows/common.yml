@@ -13,17 +13,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18.18
+          node-version: 20
           check-latest: true
-          registry-url: https://npmp.mynth.ai
-          always-auth: true
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.MYNTH_NPMP }}
 
       - name: Update npm
         run: npm install -g npm@latest
@@ -34,7 +30,7 @@ jobs:
       - name: Install Aiken
         run: |
           curl -sSfL https://install.aiken-lang.org | bash
-          ~/.aiken/bin/aikup
+          ~/.aiken/bin/aikup install v1.1.21
           sudo ln -s ~/.aiken/bin/aiken /usr/local/bin/aiken
 
       - name: Build

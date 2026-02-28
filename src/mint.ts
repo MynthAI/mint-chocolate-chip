@@ -9,7 +9,7 @@ import {
   validatorToAddress,
 } from "@lucid-evolution/lucid";
 import { Command } from "commander";
-import { Problem } from "ts-handling";
+import { isProblem } from "ts-handling";
 import { loadLucid } from "wallet";
 import {
   Address,
@@ -39,7 +39,7 @@ const program = new Command()
     if (!wallet.utxos.length) return logThenExit("Wallet must be funded");
 
     const plutus = (await loadPlutus()).unwrap();
-    if (plutus instanceof Problem) return logThenExit(plutus.error);
+    if (isProblem(plutus)) return logThenExit(plutus.error);
 
     const network = getNetwork(projectId);
     const txs: TxSignBuilder[] = [];

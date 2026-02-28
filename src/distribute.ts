@@ -15,7 +15,7 @@ import { type } from "arktype";
 import { Seed } from "cardano-ts";
 import { Command } from "commander";
 import { chunk } from "es-toolkit/array";
-import { isProblem, mayFail, Problem } from "ts-handling";
+import { isProblem, mayFail } from "ts-handling";
 import { loadLucid } from "wallet";
 import { Config, logThenExit, Options, validate } from "./inputs";
 import { loadPlutus } from "./script";
@@ -40,7 +40,7 @@ const program = new Command()
     const config = validate(Config, process.env);
     const projectId = config.BLOCKFROST_API_KEY;
     const lucid = await loadLucid(projectId);
-    const addresses = validate(Addresses(lucid.config().network), $filename);
+    const addresses = validate(Addresses(lucid.config().network!), $filename);
     const amount = addresses.length;
     const options = validate(Options, $options);
 
@@ -51,14 +51,14 @@ const program = new Command()
     if (!wallet.utxos.length) return logThenExit("Wallet must be funded");
 
     const plutus = (await loadPlutus("multiple.mint")).unwrap();
-    if (plutus instanceof Problem) return logThenExit(plutus.error);
+    if (isProblem(plutus)) return logThenExit(plutus.error);
 
     const network = getNetwork(projectId);
     const txs: TxSignBuilder[] = [];
     lucid.selectWallet.fromAddress(wallet.address, wallet.utxos);
     const key = new Seed(
       seed,
-      lucid.config().network === "Mainnet" ? "mainnet" : "testnet"
+      lucid.config().network! === "Mainnet" ? "mainnet" : "testnet"
     ).getPrivateKey();
 
     const chunks = chunk(Array.from({ length: Number(amount) }), amountPerTx);

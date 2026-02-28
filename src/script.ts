@@ -14,10 +14,13 @@ const Plutus = type({
     .array()
     .exactlyLength(2),
 }).pipe((v) =>
-  v.validators.reduce((validators, validator) => {
-    validators[validator.title] = validator.compiledCode;
-    return validators;
-  }, {} as Record<Validator, string>)
+  v.validators.reduce(
+    (validators, validator) => {
+      validators[validator.title] = validator.compiledCode;
+      return validators;
+    },
+    {} as Record<Validator, string>
+  )
 );
 
 const loadPlutus = async (
