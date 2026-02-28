@@ -1,6 +1,6 @@
 import { Data, mintingPolicyToId } from "@lucid-evolution/lucid";
 import { Command } from "commander";
-import { Problem } from "ts-handling";
+import { isProblem } from "ts-handling";
 import { Address, Amount, Config, logThenExit, TxId, validate } from "./inputs";
 import { loadPlutus } from "./script";
 import { loadLucid, loadWallet } from "./wallet";
@@ -22,7 +22,7 @@ const program = new Command()
     if (!wallet.utxos.length) return logThenExit("Wallet must be funded");
 
     const plutus = (await loadPlutus()).unwrap();
-    if (plutus instanceof Problem) return logThenExit(plutus.error);
+    if (isProblem(plutus)) return logThenExit(plutus.error);
 
     const lucid = await loadLucid(projectId);
     lucid.selectWallet.fromAddress(wallet.address, wallet.utxos);

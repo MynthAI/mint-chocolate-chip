@@ -12,7 +12,7 @@ import {
 import { Seed } from "cardano-ts";
 import { Command } from "commander";
 import { chunk } from "es-toolkit/array";
-import { Problem } from "ts-handling";
+import { isProblem } from "ts-handling";
 import { loadLucid } from "wallet";
 import { Amount, Config, logThenExit, validate } from "./inputs";
 import { loadPlutus } from "./script";
@@ -36,7 +36,7 @@ const program = new Command()
     if (!wallet.utxos.length) return logThenExit("Wallet must be funded");
 
     const plutus = (await loadPlutus("multiple.mint")).unwrap();
-    if (plutus instanceof Problem) return logThenExit(plutus.error);
+    if (isProblem(plutus)) return logThenExit(plutus.error);
 
     const network = getNetwork(projectId);
     const txs: TxSignBuilder[] = [];
@@ -44,7 +44,7 @@ const program = new Command()
     lucid.selectWallet.fromAddress(wallet.address, wallet.utxos);
     const key = new Seed(
       seed,
-      lucid.config().network === "Mainnet" ? "mainnet" : "testnet"
+      lucid.config().network! === "Mainnet" ? "mainnet" : "testnet"
     ).getPrivateKey();
 
     const chunks = chunk(Array.from({ length: Number(amount) }), amountPerTx);

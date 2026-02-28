@@ -13,12 +13,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Aiken
         run: |
           curl -sSfL https://install.aiken-lang.org | bash
-          ~/.aiken/bin/aikup install v1.0.29-alpha
+          ~/.aiken/bin/aikup install v1.1.21
           sudo ln -s ~/.aiken/bin/aiken /usr/local/bin/aiken
 
       - name: Run tests
