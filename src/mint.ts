@@ -4,6 +4,7 @@ import {
   Address,
   Assets,
   createClient,
+  Data,
   Effect,
   ScriptHash,
   TransactionHash,
@@ -130,6 +131,7 @@ const program = new Command()
       .newTx()
       .mintAssets({
         assets: Assets.fromRecord({ [token]: amount }),
+        redeemer: new Data.Constr({ index: 0n, fields: [] }),
       })
       .readFrom({ referenceInputs: [refScript] })
       .collectFrom({ inputs: [ref] })
