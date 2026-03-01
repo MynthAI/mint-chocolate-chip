@@ -13,6 +13,43 @@ index 483bee1..472ca67 100644
      return [txIn, txOut];
    }) : [];
    const payload = {
+diff --git a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/Ogmios.js b/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/Ogmios.js
+index a1b2c3d..e4f5a6b 100644
+--- a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/Ogmios.js
++++ b/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/Ogmios.js
+@@ -1,8 +1,9 @@
+ import { Schema } from "effect";
+ import * as CoreAddress from "../../../Address.js";
+ import * as AssetName from "../../../AssetName.js";
+ import * as Bytes from "../../../Bytes.js";
+ import * as PlutusData from "../../../Data.js";
+ import * as NativeScripts from "../../../NativeScripts.js";
+ import * as PolicyId from "../../../PolicyId.js";
+ import * as TransactionHash from "../../../TransactionHash.js";
++import * as UPLC from "../../../uplc/UPLC.js";
+ export const JSONRPCSchema = schema => Schema.Struct({
+@@ -173,12 +174,15 @@ export const toOgmiosUTxOs = utxos => {
+         case "PlutusV1":
+           // For Plutus scripts, send only the raw script bytes without CBOR envelope
+           // Ogmios v6 expects raw scripts without CBOR tags when using explicit JSON notation
++          // Convert double-CBOR to single-CBOR encoding as required by Ogmios
+           return {
+             language: "plutus:v1",
+-            cbor: Bytes.toHex(script.bytes)
++            cbor: UPLC.applySingleCborEncoding(Bytes.toHex(script.bytes))
+           };
+         case "PlutusV2":
+           return {
+             language: "plutus:v2",
+-            cbor: Bytes.toHex(script.bytes)
++            cbor: UPLC.applySingleCborEncoding(Bytes.toHex(script.bytes))
+           };
+         case "PlutusV3":
+           return {
+             language: "plutus:v3",
+-            cbor: Bytes.toHex(script.bytes)
++            cbor: UPLC.applySingleCborEncoding(Bytes.toHex(script.bytes))
+           };
 diff --git a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts
 index 4271f0b..6f0ccb3 100644
 --- a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts
@@ -29,3 +66,27 @@ index 4271f0b..6f0ccb3 100644
              return [txIn, txOut]
            })
          : []
+diff --git a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Ogmios.ts b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Ogmios.ts
+index c1d2e3f..d4e5f6a 100644
+--- a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Ogmios.ts
++++ b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Ogmios.ts
+@@ -13,6 +13,7 @@ import * as NativeScripts from "../../../NativeScripts.js"
+ import * as PolicyId from "../../../PolicyId.js"
+ import type * as CoreScript from "../../../Script.js"
+ import * as TransactionHash from "../../../TransactionHash.js"
+ import type * as CoreUTxO from "../../../UTxO.js"
++import * as UPLC from "../../../uplc/UPLC.js"
+ 
+@@ -170,9 +171,12 @@ export const toOgmiosUTxOs = (utxos: readonly CoreUTxO.UTxO[]): OgmiosUTxO[] =>
+         case "PlutusV1":
+           // For Plutus scripts, send only the raw script bytes without CBOR envelope
+           // Ogmios v6 expects raw scripts without CBOR tags when using explicit JSON notation
+-          return { language: "plutus:v1", cbor: Bytes.toHex(script.bytes) }
++          // Convert double-CBOR to single-CBOR encoding as required by Ogmios
++          return { language: "plutus:v1", cbor: UPLC.applySingleCborEncoding(Bytes.toHex(script.bytes)) }
+         case "PlutusV2":
+-          return { language: "plutus:v2", cbor: Bytes.toHex(script.bytes) }
++          return { language: "plutus:v2", cbor: UPLC.applySingleCborEncoding(Bytes.toHex(script.bytes)) }
+         case "PlutusV3":
+-          return { language: "plutus:v3", cbor: Bytes.toHex(script.bytes) }
++          return { language: "plutus:v3", cbor: UPLC.applySingleCborEncoding(Bytes.toHex(script.bytes)) }
