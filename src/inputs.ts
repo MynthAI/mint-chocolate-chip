@@ -1,4 +1,4 @@
-import { fromText } from "@lucid-evolution/lucid";
+import { Text } from "@evolution-sdk/evolution";
 import { type } from "arktype";
 
 type AnyType = {
@@ -23,7 +23,7 @@ const logThenExit = (message: string): never => {
 const Address = type("string");
 
 const TokenName = type("string")
-  .pipe((s) => fromText(s))
+  .pipe((s) => Text.toHex(s))
   .narrow((v, ctx) => v.length <= 64 || ctx.mustBe("no more than 32 bytes"));
 
 const Amount = type("string")

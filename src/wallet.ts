@@ -1,10 +1,5 @@
-import {
-  Blockfrost,
-  Lucid,
-  Network,
-  UTxO,
-  walletFromSeed,
-} from "@lucid-evolution/lucid";
+import { Address, createClient, UTxO } from "@evolution-sdk/evolution";
+import { addressFromSeed } from "@evolution-sdk/evolution/sdk/wallet/Derivation";
 
 const expiresIn = 600000; // About 10 minutes
 
@@ -17,40 +12,8 @@ const parseNetwork = (projectId: string): CardanoNetwork => {
   return network;
 };
 
-const loadWallet = async (projectId: string, address: string) => {
-  const network = parseNetwork(projectId);
-  const provider = new Blockfrost(
-    `https://cardano-${network}.blockfrost.io/api/v0`,
-    projectId
-  );
-  const utxos: UTxO[] = await provider.getUtxos(address);
-  return { address, utxos };
-};
-
-const loadWalletFromSeed = async (projectId: string, seed: string) => {
-  const network = getNetwork(projectId);
-  const { address } = walletFromSeed(seed, { network });
-  return loadWallet(projectId, address);
-};
-
-const loadLucid = async (projectId: string) => {
-  const network = parseNetwork(projectId);
-  const lucid = await Lucid(
-    new Blockfrost(
-      `https://cardano-${network}.blockfrost.io/api/v0`,
-      projectId
-    ),
-    getNetwork(projectId)
-  );
-
-  const newTx = lucid.newTx;
-  lucid.newTx = () => newTx().validTo(Date.now() + expiresIn);
-
-  return lucid;
-};
-
 const getNetwork = (projectId: string) => {
-  const networks: Record<CardanoNetwork, Network> = {
+  const networks: Record<CardanoNetwork, "Mainnet" | "Preprod" | "Preview"> = {
     mainnet: "Mainnet",
     preprod: "Preprod",
     preview: "Preview",
@@ -58,4 +21,38 @@ const getNetwork = (projectId: string) => {
   return networks[parseNetwork(projectId)];
 };
 
-export { getNetwork, loadLucid, loadWallet, loadWalletFromSeed };
+const makeBlockfrostConfig = (projectId: string) => {
+  const network = parseNetwork(projectId);
+  return {
+    type: "blockfrost" as const,
+    baseUrl: `https://cardano-${network}.blockfrost.io/api/v0`,
+    projectId,
+  };
+};
+
+const loadWallet = async (projectId: string, addressBech32: string) => {
+  const provider = createClient({
+    network: parseNetwork(projectId),
+    provider: makeBlockfrostConfig(projectId),
+  });
+  const address = Address.fromBech32(addressBech32);
+  const utxos: UTxO.UTxO[] = await provider.getUtxos(address);
+  return { address: addressBech32, utxos };
+};
+
+const loadWalletFromSeed = async (projectId: string, seed: string) => {
+  const network = getNetwork(projectId);
+  const derivationNetwork =
+    network === "Mainnet" ? "Mainnet" : ("Testnet" as const);
+  const { address } = addressFromSeed(seed, { network: derivationNetwork });
+  return loadWallet(projectId, Address.toBech32(address));
+};
+
+export {
+  expiresIn,
+  getNetwork,
+  loadWallet,
+  loadWalletFromSeed,
+  makeBlockfrostConfig,
+  parseNetwork,
+};
