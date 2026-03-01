@@ -156,7 +156,6 @@ const program = new Command()
       for (const [j, token] of tokens.entries()) {
         mintBuilder.mintAssets({
           assets: Assets.fromRecord({ [token]: 1n }),
-          redeemer: Data.constr(0n, []),
         });
         mintBuilder.payToAddress({
           address: Address.fromBech32(addrs[j]),

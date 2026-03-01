@@ -3,7 +3,6 @@ import {
   Address,
   Assets,
   createClient,
-  Data,
   ScriptHash,
   TransactionHash,
   UPLC,
@@ -64,7 +63,6 @@ const program = new Command()
       .newTx(wallet.utxos)
       .mintAssets({
         assets: Assets.fromRecord({ [token]: 1n }),
-        redeemer: Data.constr(0n, []),
       })
       .attachScript({ script })
       .collectFrom({ inputs: [ref] })
@@ -79,7 +77,6 @@ const program = new Command()
       .newTx(mintChain.available)
       .mintAssets({
         assets: Assets.fromRecord({ [token]: -1n }),
-        redeemer: Data.constr(0n, []),
       })
       .attachScript({ script })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
