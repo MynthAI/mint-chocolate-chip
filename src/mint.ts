@@ -1,10 +1,10 @@
 import { PlutusV3 } from "@evolution-sdk/evolution/PlutusV3";
+import { calculateMinimumUtxoLovelace } from "@evolution-sdk/evolution/sdk/builders/TxBuilderImpl";
 import {
   Address,
   Assets,
   createClient,
-  Data,
-  InlineDatum,
+  Effect,
   ScriptHash,
   TransactionHash,
   UPLC,
@@ -90,14 +90,27 @@ const program = new Command()
         TransactionHash.toHex(u.transactionId) !==
           TransactionHash.toHex(ref.transactionId) || u.index !== ref.index
     );
+    const { coinsPerUtxoByte } = await client.getProtocolParameters();
+    // The Babbage/Conway min UTxO formula is: coinsPerUtxoByte * (160 + |output|).
+    // The SDK's calculateMinimumUtxoLovelace omits the 160-byte UTxO entry overhead,
+    // so we pass coinsPerUtxoByte: 1n to get the raw CBOR byte count and apply the
+    // formula ourselves. We also use a 1 ADA placeholder instead of Assets.zero so
+    // that the lovelace field uses the same 5-byte CBOR encoding as the final value
+    // (any lovelace >= 65536 encodes as 5 bytes; 0 encodes as 1 byte).
+    const cborSize = await Effect.runPromise(
+      calculateMinimumUtxoLovelace({
+        address: blackholeAddr,
+        assets: Assets.fromLovelace(1_000_000n),
+        scriptRef: script,
+        coinsPerUtxoByte: 1n,
+      })
+    );
+    const minLovelace = (cborSize + 160n) * coinsPerUtxoByte;
     const deployResult = await client
       .newTx()
       .payToAddress({
         address: blackholeAddr,
-        assets: Assets.fromLovelace(2000000n),
-        datum: new InlineDatum.InlineDatum({
-          data: new Data.Constr({ index: 0n, fields: [] }),
-        }),
+        assets: Assets.fromLovelace(minLovelace),
         script,
       })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
