@@ -95,3 +95,40 @@ diff --git a/src/sdk/builders/TxBuilderImpl.ts b/src/sdk/builders/TxBuilderImpl.
  
      // Create placeholder scriptDataHash if Plutus scripts are present
      // This is needed for accurate size estimation (32 bytes + CBOR overhead)
+diff --git a/dist/utils/Hash.js b/dist/utils/Hash.js
+--- a/dist/utils/Hash.js
++++ b/dist/utils/Hash.js
+@@ -133,6 +133,11 @@ export const hashScriptData = (redeemers, costModels, datums, format = "array",
+   if (hasDatums && redeemers.length === 0) {
+     // Special case (CDDL): [ A0 | tag(258) datums | A0 ]
+     const datumsBytes = encodeDatumsTaggedSet(datums);
+-    payload = concatBytes(new Uint8Array([0xa0]),
+-    // Empty map
+-    datumsBytes, new Uint8Array([0xa0]) // Empty map
+-    );
+-  } else {
++    payload = concatBytes(new Uint8Array([0xa0]), datumsBytes, new Uint8Array([0xa0]));
++  } else if (redeemers.length === 0 && !hasDatums) {
++    // CIP-0069 case: no redeemers, no datums, but language views needed.
++    // Conway era uses A0 (empty CBOR map) to represent absent redeemers.
++    payload = concatBytes(new Uint8Array([0xa0]), langViewsBytes);
++  } else {
+diff --git a/src/utils/Hash.ts b/src/utils/Hash.ts
+--- a/src/utils/Hash.ts
++++ b/src/utils/Hash.ts
+@@ -155,6 +155,11 @@ export const hashScriptData = (
+   if (hasDatums && redeemers.length === 0) {
+     // Special case (CDDL): [ A0 | tag(258) datums | A0 ]
+     const datumsBytes = encodeDatumsTaggedSet(datums)
+-    payload = concatBytes(
+-      new Uint8Array([0xa0]), // Empty map
+-      datumsBytes,
+-      new Uint8Array([0xa0]) // Empty map
+-    )
+-  } else {
++    payload = concatBytes(new Uint8Array([0xa0]), datumsBytes, new Uint8Array([0xa0]))
++  } else if (redeemers.length === 0 && !hasDatums) {
++    // CIP-0069 case: no redeemers, no datums, but language views needed.
++    // Conway era uses A0 (empty CBOR map) to represent absent redeemers.
++    payload = concatBytes(new Uint8Array([0xa0]), langViewsBytes)
++  } else {
