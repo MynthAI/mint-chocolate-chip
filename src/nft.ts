@@ -133,9 +133,11 @@ const program = new Command()
   });
 
 const createScript = (plutus: string, ref: UTxO.UTxO): PlutusV3 => {
-  const scriptHex = UPLC.applyParamsToScript(plutus, [
-    TransactionHash.toBytes(ref.transactionId),
-  ]);
+  const scriptHex = UPLC.applySingleCborEncoding(
+    UPLC.applyParamsToScript(plutus, [
+      TransactionHash.toBytes(ref.transactionId),
+    ])
+  );
 
   return new PlutusV3({ bytes: hexToBytes(scriptHex) });
 };
