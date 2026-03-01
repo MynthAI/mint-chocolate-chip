@@ -101,17 +101,17 @@ const program = new Command()
     if (!refScript?.scriptRef) return logThenExit("Script didn't deploy");
     cborTxs.push(deployChain.cbor);
 
-    // Mint transaction: mint token using the deployed reference script
+    // Mint transaction: mint token with the script attached directly to the tx
     const mintResult = await client
       .newTx(deployChain.available)
+      .attachScript({ script })
       .mintAssets({
         assets: Assets.fromRecord({ [token]: amount }),
         redeemer: new Data.Constr({ index: 0n, fields: [] }),
       })
-      .readFrom({ referenceInputs: [refScript] })
       .collectFrom({ inputs: [ref] })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
-      .build({ changeAddress, passAdditionalUtxos: true });
+      .build({ changeAddress });
 
     const mintChain = await buildAndChain(mintResult, deployChain.available);
     cborTxs.push(mintChain.cbor);
