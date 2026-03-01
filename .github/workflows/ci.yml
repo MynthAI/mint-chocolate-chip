@@ -12,6 +12,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6.0.2
 
-      - run: npm install
+      - name: Set up nodejs
+        run: src/dev/setup-node.sh
 
-      - run: npm exec turbo ci
+      - name: Run CI
+        run: npm exec turbo ci
