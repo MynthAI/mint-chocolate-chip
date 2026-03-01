@@ -1,0 +1,17 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: mynth
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+
+      - run: npm install
+
+      - run: npm exec turbo ci
