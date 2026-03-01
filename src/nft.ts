@@ -42,7 +42,7 @@ const program = new Command()
     const wallet = await loadWalletFromSeed(projectId, seed);
     if (!wallet.utxos.length) return logThenExit("Wallet must be funded");
 
-    const plutus = (await loadPlutus("multiple.mint")).unwrap();
+    const plutus = (await loadPlutus("multiple.mint.mint")).unwrap();
     if (isProblem(plutus)) return logThenExit(plutus.error);
 
     const network = getNetwork(projectId);
