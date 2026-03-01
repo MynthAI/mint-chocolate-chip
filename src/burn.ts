@@ -76,7 +76,7 @@ const program = new Command()
       .newTx(wallet.utxos)
       .mintAssets({
         assets: Assets.fromRecord({ [token]: amount * -1n }),
-        redeemer: new Data.Constr({ index: 0n, fields: [] }),
+        redeemer: Data.constr(0n, []),
       })
       .readFrom({ referenceInputs: [refScript] })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })

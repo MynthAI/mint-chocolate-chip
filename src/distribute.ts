@@ -105,7 +105,7 @@ const program = new Command()
         address: blackholeAddr,
         assets: Assets.fromLovelace(2000000n),
         datum: new InlineDatum.InlineDatum({
-          data: new Data.Constr({ index: 0n, fields: [] }),
+          data: Data.constr(0n, []),
         }),
         script,
       })
@@ -156,7 +156,7 @@ const program = new Command()
       for (const [j, token] of tokens.entries()) {
         mintBuilder.mintAssets({
           assets: Assets.fromRecord({ [token]: 1n }),
-          redeemer: new Data.Constr({ index: 0n, fields: [] }),
+          redeemer: Data.constr(0n, []),
         });
         mintBuilder.payToAddress({
           address: Address.fromBech32(addrs[j]),

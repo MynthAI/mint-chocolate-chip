@@ -131,7 +131,7 @@ const program = new Command()
       .newTx()
       .mintAssets({
         assets: Assets.fromRecord({ [token]: amount }),
-        redeemer: new Data.Constr({ index: 0n, fields: [] }),
+        redeemer: Data.constr(0n, []),
       })
       .readFrom({ referenceInputs: [refScript] })
       .collectFrom({ inputs: [ref] })
