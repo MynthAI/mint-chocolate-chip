@@ -11,6 +11,7 @@
   "type": "module",
   "scripts": {
     "build": "concurrently \"aiken build\" \"npx tsc\"",
+    "postinstall": "patch-package",
     "mint": "npx tsx src/mint.ts",
     "nft": "npx tsx src/nft.ts",
     "distribute": "npx tsx src/distribute.ts",
@@ -38,6 +39,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-node": "^0.3.9",
     "eslint-plugin-import": "^2.32.0",
+    "patch-package": "^8.0.1",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
