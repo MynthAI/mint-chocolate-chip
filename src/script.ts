@@ -5,7 +5,7 @@ import { UPLC } from "@evolution-sdk/evolution";
 import { type } from "arktype";
 import { Err, Ok, Result } from "ts-handling";
 
-const Validators = ["mint.mint", "multiple.mint"] as const;
+const Validators = ["mint.mint.mint", "multiple.mint.mint"] as const;
 type Validator = (typeof Validators)[number];
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -27,7 +27,7 @@ const Plutus = type({
 );
 
 const loadPlutus = async (
-  validator: Validator = "mint.mint"
+  validator: Validator = "mint.mint.mint"
 ): Promise<Result<string, string>> => {
   const plutusPath = join(here, "..", "plutus.json");
   const plutus = Plutus(JSON.parse(await fs.readFile(plutusPath, "utf8")));
