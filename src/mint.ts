@@ -111,7 +111,7 @@ const program = new Command()
       .readFrom({ referenceInputs: [refScript] })
       .collectFrom({ inputs: [ref] })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
-      .build({ changeAddress });
+      .build({ changeAddress, passAdditionalUtxos: true });
 
     const mintChain = await buildAndChain(mintResult, deployChain.available);
     cborTxs.push(mintChain.cbor);
