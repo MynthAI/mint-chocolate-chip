@@ -1,10 +1,10 @@
 import { PlutusV3 } from "@evolution-sdk/evolution/PlutusV3";
+import { calculateMinimumUtxoLovelace } from "@evolution-sdk/evolution/sdk/builders/TxBuilderImpl";
 import {
   Address,
   Assets,
   createClient,
-  Data,
-  InlineDatum,
+  Effect,
   ScriptHash,
   TransactionHash,
   UPLC,
@@ -90,14 +90,20 @@ const program = new Command()
         TransactionHash.toHex(u.transactionId) !==
           TransactionHash.toHex(ref.transactionId) || u.index !== ref.index
     );
+    const { coinsPerUtxoByte } = await client.getProtocolParameters();
+    const minLovelace = await Effect.runPromise(
+      calculateMinimumUtxoLovelace({
+        address: blackholeAddr,
+        assets: Assets.zero,
+        scriptRef: script,
+        coinsPerUtxoByte,
+      })
+    );
     const deployResult = await client
       .newTx()
       .payToAddress({
         address: blackholeAddr,
-        assets: Assets.fromLovelace(5000000n),
-        datum: new InlineDatum.InlineDatum({
-          data: new Data.Constr({ index: 0n, fields: [] }),
-        }),
+        assets: Assets.fromLovelace(minLovelace),
         script,
       })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
