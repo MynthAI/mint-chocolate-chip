@@ -4,12 +4,15 @@ import {
   Assets,
   createClient,
   Data,
+  Effect,
   InlineDatum,
   ScriptHash,
+  Transaction,
   TransactionHash,
   UPLC,
   UTxO,
 } from "@evolution-sdk/evolution";
+import { EvaluationError } from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder";
 import { Command } from "commander";
 import { isProblem } from "ts-handling";
 import {
@@ -108,11 +111,37 @@ const program = new Command()
     if (!refScript?.scriptRef) return logThenExit("Script didn't deploy");
     cborTxs.push(deployChain.cbor);
 
+    // Custom evaluator: calls Blockfrost but only passes off-chain UTxOs.
+    // provider-based evaluation (Blockfrost) receives all additional UTxOs by
+    // default, which includes on-chain wallet UTxOs still in deployChain.available
+    // and triggers an OverlappingAdditionalUtxo error. By filtering to only the
+    // UTxOs not present in wallet.utxos we avoid that error while still giving
+    // Blockfrost the off-chain inputs it needs to evaluate the script.
+    const evaluator = {
+      evaluate: (
+        tx: Transaction.Transaction,
+        additionalUtxos: ReadonlyArray<UTxO.UTxO> | undefined,
+        _context: unknown
+      ) =>
+        Effect.tryPromise({
+          try: () => {
+            const offChainUtxos = (additionalUtxos ?? []).filter(
+              (u) =>
+                !wallet.utxos.some(
+                  (w) =>
+                    TransactionHash.toHex(w.transactionId) ===
+                      TransactionHash.toHex(u.transactionId) &&
+                    w.index === u.index
+                )
+            );
+            return client.evaluateTx(tx, offChainUtxos as UTxO.UTxO[]);
+          },
+          catch: (error) =>
+            new EvaluationError({ message: String(error), cause: error }),
+        }),
+    };
+
     // Mint transaction: mint token using the deployed reference script.
-    // Pass deployChain.available as availableUtxos so coin selection only uses
-    // off-chain UTxOs; this prevents on-chain UTxOs from being included in the
-    // additionalUtxoSet passed to the evaluator, which would cause an
-    // OverlappingAdditionalUtxo error.
     const mintResult = await client
       .newTx()
       .mintAssets({
@@ -125,7 +154,7 @@ const program = new Command()
       .build({
         changeAddress,
         availableUtxos: deployChain.available,
-        passAdditionalUtxos: true,
+        evaluator,
       });
 
     const mintChain = await buildAndChain(mintResult, deployChain.available);
