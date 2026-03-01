@@ -101,27 +101,23 @@ const program = new Command()
     if (!refScript?.scriptRef) return logThenExit("Script didn't deploy");
     cborTxs.push(deployChain.cbor);
 
-    // Only use offline UTxOs (from setup/deploy chain) for the mint transaction.
-    // deployChain.available may include unconsumed on-chain wallet UTxOs; passing
-    // those as additionalUtxos to Ogmios causes an OverlappingAdditionalUtxo fault.
-    // The refScript UTxO is excluded: it is at an unspendable blackhole address and
-    // is not needed here since we attach the script directly (attachScript below).
+    // Only pass offline UTxOs (created by setup/deploy) to the mint transaction
+    // builder. deployChain.available may include unconsumed on-chain wallet UTxOs;
+    // passing those via passAdditionalUtxos: true causes an OverlappingAdditionalUtxo
+    // fault from Ogmios because those UTxOs are already on-chain.
     const offlineAvailable = [
       ref,
       ...deployChain.outputs.filter((u) => !u.scriptRef),
     ];
 
-    // Mint transaction: attach script directly rather than using the deployed
-    // reference script. The reference script is deployed for future burn transactions,
-    // but during offline chaining the ref UTxO lacks script bytes in the additional
-    // UTxO payload, which would prevent Ogmios from evaluating the script.
+    // Mint transaction: mint token using the deployed reference script
     const mintResult = await client
       .newTx(offlineAvailable)
       .mintAssets({
         assets: Assets.fromRecord({ [token]: amount }),
         redeemer: new Data.Constr({ index: 0n, fields: [] }),
       })
-      .attachScript({ script })
+      .readFrom({ referenceInputs: [refScript] })
       .collectFrom({ inputs: [ref] })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
       .build({ changeAddress, passAdditionalUtxos: true });
