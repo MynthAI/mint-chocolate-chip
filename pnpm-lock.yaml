@@ -11,6 +11,9 @@ importers:
       '@evolution-sdk/evolution':
         specifier: ^0.3.19
         version: 0.3.19(@effect/cluster@0.48.16(@effect/platform@0.90.10(effect@3.19.19))(@effect/rpc@0.69.5(@effect/platform@0.90.10(effect@3.19.19))(effect@3.19.19))(@effect/sql@0.44.2(@effect/experimental@0.54.6(@effect/platform@0.90.10(effect@3.19.19))(effect@3.19.19))(@effect/platform@0.90.10(effect@3.19.19))(effect@3.19.19))(@effect/workflow@0.9.6(@effect/platform@0.90.10(effect@3.19.19))(@effect/rpc@0.69.5(@effect/platform@0.90.10(effect@3.19.19))(effect@3.19.19))(effect@3.19.19))(effect@3.19.19))(@effect/rpc@0.69.5(@effect/platform@0.90.10(effect@3.19.19))(effect@3.19.19))(@effect/sql@0.44.2(@effect/experimental@0.54.6(@effect/platform@0.90.10(effect@3.19.19))(effect@3.19.19))(@effect/platform@0.90.10(effect@3.19.19))(effect@3.19.19))
+      '@inquirer/prompts':
+        specifier: ^8.3.0
+        version: 8.3.0(@types/node@22.19.13)
       '@noble/hashes':
         specifier: ^1.8.0
         version: 1.8.0
