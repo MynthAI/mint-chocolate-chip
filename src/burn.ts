@@ -1,9 +1,30 @@
-import { Data, mintingPolicyToId } from "@lucid-evolution/lucid";
+import {
+  Address,
+  Assets,
+  createClient,
+  Data,
+  ScriptHash,
+  Transaction,
+  TransactionHash,
+  TransactionInput,
+} from "@evolution-sdk/evolution";
 import { Command } from "commander";
 import { isProblem } from "ts-handling";
-import { Address, Amount, Config, logThenExit, TxId, validate } from "./inputs";
+import {
+  Address as AddressInput,
+  Amount,
+  Config,
+  logThenExit,
+  TxId,
+  validate,
+} from "./inputs";
 import { loadPlutus } from "./script";
-import { loadLucid, loadWallet } from "./wallet";
+import {
+  expiresIn,
+  loadWallet,
+  makeBlockfrostConfig,
+  parseNetwork,
+} from "./wallet";
 
 const program = new Command()
   .name("burns")
@@ -12,7 +33,7 @@ const program = new Command()
   .argument("<reference>", "The reference given during the mint")
   .argument("<amount>", "The amount of token to burn")
   .action(async ($address, $reference, $amount) => {
-    const address = validate(Address, $address);
+    const address = validate(AddressInput, $address);
     const reference = validate(TxId, $reference);
     const amount = validate(Amount, $amount);
     const config = validate(Config, process.env);
@@ -24,29 +45,45 @@ const program = new Command()
     const plutus = (await loadPlutus()).unwrap();
     if (isProblem(plutus)) return logThenExit(plutus.error);
 
-    const lucid = await loadLucid(projectId);
-    lucid.selectWallet.fromAddress(wallet.address, wallet.utxos);
+    const provider = createClient({
+      network: parseNetwork(projectId),
+      provider: makeBlockfrostConfig(projectId),
+    });
 
-    const refScripts = await lucid.utxosByOutRef([
-      { txHash: reference, outputIndex: 0 },
+    const refScripts = await provider.getUtxosByOutRef([
+      new TransactionInput.TransactionInput({
+        transactionId: TransactionHash.fromHex(reference),
+        index: 0n,
+      }),
     ]);
     if (!refScripts.length) return logThenExit("Could not find script");
     const [refScript] = refScripts;
     if (!refScript.scriptRef) return logThenExit("Script not deployed");
 
-    const policy = mintingPolicyToId(refScript.scriptRef);
+    const policy = ScriptHash.toHex(ScriptHash.fromScript(refScript.scriptRef));
     const token = wallet.utxos
-      .flatMap((utxo) => Object.keys(utxo.assets))
+      .flatMap((utxo) => Assets.getUnits(utxo.assets))
       .find((asset) => asset.startsWith(policy));
     if (!token) return logThenExit("Token isn't in your wallet");
 
-    const tx = lucid
-      .newTx()
-      .mintAssets({ [token]: amount * -1n }, Data.void())
-      .readFrom([refScript]);
+    const client = createClient({
+      network: parseNetwork(projectId),
+      provider: makeBlockfrostConfig(projectId),
+      wallet: { type: "read-only", address: wallet.address },
+    });
 
-    const completed = await (await tx.complete()).complete();
-    console.log(completed.toCBOR());
+    const txResult = await client
+      .newTx(wallet.utxos)
+      .mintAssets({
+        assets: Assets.fromRecord({ [token]: amount * -1n }),
+        redeemer: new Data.Constr({ index: 0n, fields: [] }),
+      })
+      .readFrom({ referenceInputs: [refScript] })
+      .setValidity({ to: BigInt(Date.now() + expiresIn) })
+      .build({ changeAddress: Address.fromBech32(wallet.address) });
+
+    const tx = await txResult.toTransaction();
+    console.log(Transaction.toCBORHex(tx));
   });
 
 program.parseAsync(process.argv);

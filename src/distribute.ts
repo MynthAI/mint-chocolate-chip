@@ -1,25 +1,33 @@
 import { readFileSync } from "fs";
 import { password } from "@inquirer/prompts";
+import { PlutusV2 } from "@evolution-sdk/evolution/PlutusV2";
 import {
-  applyParamsToScript,
+  Address,
+  Assets,
+  createClient,
   Data,
-  getAddressDetails,
-  MintingPolicy,
-  mintingPolicyToId,
-  Network,
-  TxSignBuilder,
+  InlineDatum,
+  KeyHash,
+  ScriptHash,
+  TransactionHash,
+  TransactionMetadatum,
+  UPLC,
   UTxO,
-  validatorToAddress,
-  walletFromSeed,
-} from "@lucid-evolution/lucid";
+} from "@evolution-sdk/evolution";
 import { type } from "arktype";
 import { Command } from "commander";
 import { chunk } from "es-toolkit/array";
 import { isProblem, mayFail } from "ts-handling";
-import { loadLucid } from "wallet";
 import { Config, logThenExit, Options, validate } from "./inputs";
 import { loadPlutus } from "./script";
-import { getNetwork, loadWalletFromSeed } from "./wallet";
+import { hexToBytes } from "./utils";
+import {
+  expiresIn,
+  getNetwork,
+  loadWalletFromSeed,
+  makeBlockfrostConfig,
+  parseNetwork,
+} from "./wallet";
 
 const amountPerTx = 45;
 
@@ -39,8 +47,8 @@ const program = new Command()
   .action(async ($filename, $options: object) => {
     const config = validate(Config, process.env);
     const projectId = config.BLOCKFROST_API_KEY;
-    const lucid = await loadLucid(projectId);
-    const addresses = validate(Addresses(lucid.config().network!), $filename);
+    const network = getNetwork(projectId);
+    const addresses = validate(Addresses(network), $filename);
     const amount = addresses.length;
     const options = validate(Options, $options);
 
@@ -53,132 +61,209 @@ const program = new Command()
     const plutus = (await loadPlutus("multiple.mint")).unwrap();
     if (isProblem(plutus)) return logThenExit(plutus.error);
 
-    const network = getNetwork(projectId);
-    const txs: TxSignBuilder[] = [];
-    lucid.selectWallet.fromAddress(wallet.address, wallet.utxos);
-    const key = walletFromSeed(seed, {
-      network: lucid.config().network!,
-    }).paymentKey;
+    const changeAddress = Address.fromBech32(wallet.address);
+
+    const client = createClient({
+      network: parseNetwork(projectId),
+      provider: makeBlockfrostConfig(projectId),
+      wallet: { type: "seed", mnemonic: seed },
+    });
 
     const chunks = chunk(Array.from({ length: Number(amount) }), amountPerTx);
-    const setup = lucid
-      .newTx()
-      .pay.ToAddress(wallet.address, { lovelace: 200000000n });
-    chunks.forEach(() =>
-      setup.pay.ToAddress(wallet.address, { lovelace: 200000000n })
-    );
-    const [[setupUtxo, ...refs], , setupTx] = await setup.chain();
-    lucid.selectWallet.fromAddress(wallet.address, [setupUtxo]);
-    txs.push(setupTx);
 
-    const blackhole = createBlackholeAddress(network);
+    // Setup transaction: create UTxOs (one per chunk) and one for funding deploys
+    const setupBuilder = client.newTx();
+    setupBuilder.payToAddress({
+      address: changeAddress,
+      assets: Assets.fromLovelace(200000000n),
+    });
+    chunks.forEach(() =>
+      setupBuilder.payToAddress({
+        address: changeAddress,
+        assets: Assets.fromLovelace(200000000n),
+      })
+    );
+    const setupResult = await setupBuilder
+      .setValidity({ to: BigInt(Date.now() + expiresIn) })
+      .build({ availableUtxos: wallet.utxos, changeAddress });
+    const setupChain = setupResult.chainResult();
+
+    const allSetupOutputs = setupChain.available.filter(
+      (u) => TransactionHash.toHex(u.transactionId) === setupChain.txHash
+    );
+    const [setupUtxo, ...refs] = allSetupOutputs;
+    const blackholeAddr = createBlackholeAddress(network);
     const script = createScript(plutus, refs[0]);
-    const policy = mintingPolicyToId(script);
+    const policy = ScriptHash.toHex(ScriptHash.fromScript(script));
     const tokenChunks = chunk(generateTokens(policy, amount), amountPerTx);
     const addressChunks = chunk(addresses, amountPerTx);
 
-    const deploy = lucid
+    // Deploy transaction: deploy script as reference to blackhole address
+    const deployResult = await client
       .newTx()
-      .pay.ToContract(
-        blackhole,
-        { kind: "inline", value: Data.void() },
-        undefined,
-        script
-      );
-    const [, [refScript], deployTx] = await deploy.chain();
-    if (!refScript.scriptRef) return logThenExit("Script didn't deploy");
-    txs.push(deployTx);
+      .payToAddress({
+        address: blackholeAddr,
+        assets: Assets.fromLovelace(2000000n),
+        datum: new InlineDatum.InlineDatum({
+          data: new Data.Constr({ index: 0n, fields: [] }),
+        }),
+        script,
+      })
+      .setValidity({ to: BigInt(Date.now() + expiresIn) })
+      .build({ availableUtxos: [setupUtxo], changeAddress });
+    const deployChain = deployResult.chainResult();
 
+    const deployOutputs = deployChain.available.filter(
+      (u) => TransactionHash.toHex(u.transactionId) === deployChain.txHash
+    );
+    const refScript = deployOutputs.find((u) => u.scriptRef);
+    if (!refScript?.scriptRef) return logThenExit("Script didn't deploy");
+
+    // Collect sign builders for all transactions
+    const signBuilders = [setupResult, deployResult];
+
+    // Mint transactions: one per chunk
     for (let i = 0; i < tokenChunks.length; i++) {
       const tokens = tokenChunks[i];
-      const addresses = addressChunks[i];
+      const addrs = addressChunks[i];
       const ref = refs[i];
-      lucid.selectWallet.fromAddress(wallet.address, [ref]);
-      const tx = lucid.newTx().readFrom([refScript]);
+      const mintBuilder = client
+        .newTx()
+        .readFrom({ referenceInputs: [refScript] });
 
       if (options.metadata) {
         const metadata = options.metadata;
-        const data = tokens.reduce<Record<string, Record<string, string>>>(
-          (tokens, token) => {
-            tokens[token.substring(56)] = metadata;
-            return tokens;
-          },
-          {}
-        );
-        tx.attachMetadata(721, {
-          [policy]: data,
+        const policyMetadata: TransactionMetadatum.TransactionMetadatum =
+          new Map(
+            tokens.map(
+              (
+                token
+              ): [
+                TransactionMetadatum.TransactionMetadatum,
+                TransactionMetadatum.TransactionMetadatum,
+              ] => [token.substring(56), objectToMetadatum(metadata)]
+            )
+          );
+        mintBuilder.attachMetadata({
+          label: 721n,
+          metadata: new Map<
+            TransactionMetadatum.TransactionMetadatum,
+            TransactionMetadatum.TransactionMetadatum
+          >([[policy, policyMetadata]]),
         });
       }
 
-      for (const [j, token] of tokens.entries())
-        tx.mintAssets({ [token]: 1n }, Data.void()).pay.ToAddress(
-          addresses[j],
-          { [token]: 1n }
-        );
+      for (const [j, token] of tokens.entries()) {
+        mintBuilder.mintAssets({
+          assets: Assets.fromRecord({ [token]: 1n }),
+          redeemer: new Data.Constr({ index: 0n, fields: [] }),
+        });
+        mintBuilder.payToAddress({
+          address: Address.fromBech32(addrs[j]),
+          assets: Assets.fromRecord({ [token]: 1n }),
+        });
+      }
 
-      const [, , mintTx] = await tx.chain();
-      txs.push(mintTx);
+      const mintResult = await mintBuilder
+        .setValidity({ to: BigInt(Date.now() + expiresIn) })
+        .build({ availableUtxos: [ref], changeAddress });
+      signBuilders.push(mintResult);
     }
 
-    for (const tx of txs) {
-      const completed = await tx.sign.withPrivateKey(key).complete();
-      const submitted = await completed.submit();
-      console.log(`Submitted ${submitted}`);
+    for (const signBuilder of signBuilders) {
+      const submitBuilder = await signBuilder.sign();
+      const txHash = await submitBuilder.submit();
+      console.log(`Submitted ${TransactionHash.toHex(txHash)}`);
     }
   });
 
-const Addresses = (network: Network) =>
+const Addresses = (network: "Mainnet" | "Preprod" | "Preview") =>
   type("string").pipe((v, ctx) => {
     const networkId = network === "Mainnet" ? 1 : 0;
     const data = mayFail(() => readFileSync(v, "utf8")).unwrap();
     if (isProblem(data)) return ctx.error("valid filename");
 
-    const addresses = data.split(/\r?\n/).filter((line) => line.trim() !== "");
+    const lines = data.split(/\r?\n/).filter((line) => line.trim() !== "");
     const stakeKeys: Record<string, string> = {};
 
-    for (const address of addresses) {
-      const details = mayFail(() => getAddressDetails(address)).unwrap();
+    for (const line of lines) {
       const error = (() => {
-        if (isProblem(details)) return "valid address";
-        if (details.networkId !== networkId) return "correct network";
-        if (!details.paymentCredential)
-          return "valid address with payment credential";
-        if (!details.stakeCredential)
-          return "valid address with stake credential";
+        let addr: Address.Address;
 
-        const key = details.stakeCredential.hash;
-        if (key in stakeKeys)
-          console.error("duplicate:", address, stakeKeys[key]);
+        try {
+          addr = Address.fromBech32(line);
+        } catch {
+          return `valid address; error with ${line}`;
+        }
 
-        stakeKeys[key] = address;
+        if (Address.getNetworkId(addr) !== networkId)
+          return `correct network; error with ${line}`;
+        if (!addr.paymentCredential)
+          return `valid address with payment credential; error with ${line}`;
+        if (!addr.stakingCredential)
+          return `valid address with stake credential; error with ${line}`;
+
+        const key =
+          addr.stakingCredential._tag === "ScriptHash"
+            ? ScriptHash.toHex(addr.stakingCredential)
+            : KeyHash.toHex(addr.stakingCredential);
+        if (key in stakeKeys) console.error("duplicate:", line, stakeKeys[key]);
+        stakeKeys[key] = line;
       })();
 
-      if (error) return ctx.error(`${error}; error with ${address}`);
+      if (error) return ctx.error(error);
     }
 
-    if (!addresses.length) return ctx.error("a list of addresses");
+    if (!lines.length) return ctx.error("a list of addresses");
 
-    return addresses;
+    return lines;
   });
 
-const createScript = (plutus: string, ref: UTxO): MintingPolicy => {
-  return {
-    type: "PlutusV2",
-    script: applyParamsToScript(plutus, [ref.txHash]),
-  };
+const createScript = (plutus: string, ref: UTxO.UTxO): PlutusV2 => {
+  const scriptHex = UPLC.applyParamsToScript(plutus, [
+    TransactionHash.toBytes(ref.transactionId),
+  ]);
+
+  return new PlutusV2({ bytes: hexToBytes(scriptHex) });
 };
 
-const createBlackholeAddress = (network: Network) => {
+const createBlackholeAddress = (
+  network: "Mainnet" | "Preprod" | "Preview"
+): Address.Address => {
   const header = "5839010000322253330033371e9101203";
   const body = Array.from({ length: 63 }, () =>
     Math.floor(Math.random() * 10)
   ).join("");
   const footer = "0048810014984d9595cd01";
 
-  return validatorToAddress(network, {
-    type: "PlutusV2",
-    script: `${header}${body}${footer}`,
+  const scriptHex = `${header}${body}${footer}`;
+  const script = new PlutusV2({ bytes: hexToBytes(scriptHex) });
+  const scriptHash = ScriptHash.fromScript(script);
+
+  return new Address.Address({
+    networkId: network === "Mainnet" ? 1 : 0,
+    paymentCredential: scriptHash,
   });
+};
+
+const objectToMetadatum = (
+  obj: unknown
+): TransactionMetadatum.TransactionMetadatum => {
+  if (typeof obj === "string") return obj;
+  if (typeof obj === "bigint") return obj;
+  if (obj instanceof Uint8Array) return obj;
+  if (Array.isArray(obj)) return obj.map(objectToMetadatum);
+
+  if (obj && typeof obj === "object") {
+    const map = new Map<
+      TransactionMetadatum.TransactionMetadatum,
+      TransactionMetadatum.TransactionMetadatum
+    >();
+    for (const [k, v] of Object.entries(obj)) map.set(k, objectToMetadatum(v));
+    return map;
+  }
+
+  throw new Error(`Unsupported metadata type: ${typeof obj}`);
 };
 
 const generateTokens = (policy: string, amount: number) =>
