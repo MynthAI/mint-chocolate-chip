@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euxo pipefail
+set -euo pipefail
 
 SOURCE="${BASH_SOURCE[0]}"
 while [[ -L "$SOURCE" ]]; do
@@ -30,7 +30,6 @@ if [[ -n "${GITHUB_PATH:-}" ]]; then
   turbo_bin="$(realpath "$(pnpm which turbo 2>/dev/null | tail -n1 | xargs realpath)")"
   turbo_bin_dir=$(dirname "$turbo_bin")
   echo "$turbo_bin_dir" >> "$GITHUB_PATH"
-  aiken_bin="$(command -v aiken)"
-  aiken_bin_dir=$(dirname "$aiken_bin")
+  aiken_bin_dir=$(realpath ~/.aiken/bin)
   echo "$aiken_bin_dir" >> "$GITHUB_PATH"
 fi
