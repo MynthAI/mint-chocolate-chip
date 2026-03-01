@@ -10,17 +10,20 @@ type Validator = (typeof Validators)[number];
 const here = dirname(fileURLToPath(import.meta.url));
 
 const Plutus = type({
-  validators: type({ title: ["===", ...Validators], compiledCode: "string" })
-    .array()
-    .exactlyLength(2),
+  validators: type({ title: "string", compiledCode: "string" }).array(),
 }).pipe((v) =>
-  v.validators.reduce(
-    (validators, validator) => {
-      validators[validator.title] = validator.compiledCode;
-      return validators;
-    },
-    {} as Record<Validator, string>
-  )
+  v.validators
+    .filter(
+      (validator): validator is { title: Validator; compiledCode: string } =>
+        (Validators as readonly string[]).includes(validator.title)
+    )
+    .reduce(
+      (validators, validator) => {
+        validators[validator.title] = validator.compiledCode;
+        return validators;
+      },
+      {} as Partial<Record<Validator, string>>
+    )
 );
 
 const loadPlutus = async (
@@ -29,7 +32,10 @@ const loadPlutus = async (
   const plutusPath = join(here, "..", "plutus.json");
   const plutus = Plutus(JSON.parse(await fs.readFile(plutusPath, "utf8")));
   if (plutus instanceof type.errors) return Err(plutus.summary);
-  return Ok(UPLC.applyDoubleCborEncoding(plutus[validator]));
+  const compiledCode = plutus[validator];
+  if (!compiledCode)
+    return Err(`Validator "${validator}" not found in plutus.json`);
+  return Ok(UPLC.applyDoubleCborEncoding(compiledCode));
 };
 
 export { loadPlutus };
