@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v6.0.2
 
       - name: Set up nodejs
-        run: src/dev/setup-node.sh
+        run: bin/setup-node.sh
 
       - name: Run CI
         run: npm exec turbo ci
