@@ -1,3 +1,54 @@
+diff --git a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/Blockfrost.js b/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/Blockfrost.js
+index 852a508..7f59aa5 100644
+--- a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/Blockfrost.js
++++ b/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/Blockfrost.js
+@@ -122,13 +122,14 @@ export const BlockfrostDatum = /*#__PURE__*/Schema.Struct({
+  * Schema for JSONWSP-wrapped Ogmios evaluation response
+  * Used by /utils/txs/evaluate/utxos endpoint
+  * Can contain either EvaluationResult (success) or EvaluationFailure (error)
++ * Can also be a fault response (jsonwsp/fault) when Ogmios encounters an error
+  */
+ export const JsonwspOgmiosEvaluationResponse = /*#__PURE__*/Schema.Struct({
+   type: /*#__PURE__*/Schema.optional(Schema.String),
+   version: /*#__PURE__*/Schema.optional(Schema.String),
+   servicename: /*#__PURE__*/Schema.optional(Schema.String),
+   methodname: /*#__PURE__*/Schema.optional(Schema.String),
+-  result: /*#__PURE__*/Schema.Struct({
++  result: /*#__PURE__*/Schema.optional(/*#__PURE__*/Schema.Struct({
+     EvaluationResult: /*#__PURE__*/Schema.optional(/*#__PURE__*/Schema.Record({
+       key: Schema.String,
+       // "spend:0", "mint:1", etc.
+@@ -138,7 +139,8 @@ export const JsonwspOgmiosEvaluationResponse = /*#__PURE__*/Schema.Struct({
+       })
+     })),
+     EvaluationFailure: /*#__PURE__*/Schema.optional(Schema.Unknown)
+-  }),
++  })),
++  fault: /*#__PURE__*/Schema.optional(Schema.Unknown),
+   reflection: /*#__PURE__*/Schema.optional(Schema.Unknown)
+ });
+ // ============================================================================
+@@ -218,13 +220,18 @@ export const transformDelegation = blockfrostDelegation => {
+  * Format: { result: { EvaluationResult: { "spend:0": { "memory": 1100, "steps": 160100 }, ... } } }
+  */
+ export const transformJsonwspOgmiosEvaluationResult = jsonwspResponse => {
++  // Check for jsonwsp/fault response (Ogmios error)
++  if (jsonwspResponse.fault) {
++    const failure = jsonwspResponse.fault;
++    throw new Error(`Script evaluation failed: ${JSON.stringify(failure)}`);
++  }
+   // Check for evaluation failure
+-  if (jsonwspResponse.result.EvaluationFailure) {
++  if (jsonwspResponse.result?.EvaluationFailure) {
+     const failure = jsonwspResponse.result.EvaluationFailure;
+     throw new Error(`Script evaluation failed: ${JSON.stringify(failure)}`);
+   }
+   // Handle success case
+-  const evaluationResult = jsonwspResponse.result.EvaluationResult;
++  const evaluationResult = jsonwspResponse.result?.EvaluationResult;
+   if (!evaluationResult) {
+     throw new Error("No evaluation result returned from Blockfrost");
+   }
 diff --git a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/BlockfrostEffect.js b/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/BlockfrostEffect.js
 index 483bee1..472ca67 100644
 --- a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/BlockfrostEffect.js
@@ -13,6 +64,72 @@ index 483bee1..472ca67 100644
      return [txIn, txOut];
    }) : [];
    const payload = {
+diff --git a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Blockfrost.ts b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Blockfrost.ts
+index db6e786..3b0bfa1 100644
+--- a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Blockfrost.ts
++++ b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Blockfrost.ts
+@@ -152,24 +152,28 @@ export type BlockfrostDatum = Schema.Schema.Type<typeof BlockfrostDatum>
+  * Schema for JSONWSP-wrapped Ogmios evaluation response
+  * Used by /utils/txs/evaluate/utxos endpoint
+  * Can contain either EvaluationResult (success) or EvaluationFailure (error)
++ * Can also be a fault response (jsonwsp/fault) when Ogmios encounters an error
+  */
+ export const JsonwspOgmiosEvaluationResponse = Schema.Struct({
+   type: Schema.optional(Schema.String),
+   version: Schema.optional(Schema.String),
+   servicename: Schema.optional(Schema.String),
+   methodname: Schema.optional(Schema.String),
+-  result: Schema.Struct({
+-    EvaluationResult: Schema.optional(
+-      Schema.Record({
+-        key: Schema.String, // "spend:0", "mint:1", etc.
+-        value: Schema.Struct({
+-          memory: Schema.Number,
+-          steps: Schema.Number
++  result: Schema.optional(
++    Schema.Struct({
++      EvaluationResult: Schema.optional(
++        Schema.Record({
++          key: Schema.String, // "spend:0", "mint:1", etc.
++          value: Schema.Struct({
++            memory: Schema.Number,
++            steps: Schema.Number
++          })
+         })
+-      })
+-    ),
+-    EvaluationFailure: Schema.optional(Schema.Unknown)
+-  }),
++      ),
++      EvaluationFailure: Schema.optional(Schema.Unknown)
++    })
++  ),
++  fault: Schema.optional(Schema.Unknown),
+   reflection: Schema.optional(Schema.Unknown)
+ })
+ 
+@@ -259,14 +263,19 @@ export const transformDelegation = (blockfrostDelegation: BlockfrostDelegation):
+ export const transformJsonwspOgmiosEvaluationResult = (
+   jsonwspResponse: JsonwspOgmiosEvaluationResponse
+ ): Array<EvalRedeemer> => {
++  // Check for jsonwsp/fault response (Ogmios error)
++  if (jsonwspResponse.fault) {
++    throw new Error(`Script evaluation failed: ${JSON.stringify(jsonwspResponse.fault)}`)
++  }
++
+   // Check for evaluation failure
+-  if (jsonwspResponse.result.EvaluationFailure) {
++  if (jsonwspResponse.result?.EvaluationFailure) {
+     const failure = jsonwspResponse.result.EvaluationFailure
+     throw new Error(`Script evaluation failed: ${JSON.stringify(failure)}`)
+   }
+ 
+   // Handle success case
+-  const evaluationResult = jsonwspResponse.result.EvaluationResult
++  const evaluationResult = jsonwspResponse.result?.EvaluationResult
+   if (!evaluationResult) {
+     throw new Error("No evaluation result returned from Blockfrost")
+   }
 diff --git a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts
 index 4271f0b..6f0ccb3 100644
 --- a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts
