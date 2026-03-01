@@ -49,10 +49,10 @@ index 852a508..f29375b 100644
      throw new Error("No evaluation result returned from Blockfrost");
    }
 diff --git a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/BlockfrostEffect.js b/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/BlockfrostEffect.js
-index 483bee1..472ca67 100644
+index 483bee1..a9d6d06 100644
 --- a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/BlockfrostEffect.js
 +++ b/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/BlockfrostEffect.js
-@@ -430,6 +430,10 @@ export const evaluateTx = (baseUrl, projectId) => (tx, additionalUTxOs) => {
+@@ -430,12 +430,19 @@ export const evaluateTx = (baseUrl, projectId) => (tx, additionalUTxOs) => {
      } else if (utxo.datumHash) {
        txOut.datumHash = utxo.datumHash;
      }
@@ -63,6 +63,17 @@ index 483bee1..472ca67 100644
      return [txIn, txOut];
    }) : [];
    const payload = {
+     cbor: txCborHex,
+     additionalUtxoSet
+   };
+-  return withRateLimit(HttpUtils.postJson(`${baseUrl}/utils/txs/evaluate/utxos`, payload, Blockfrost.JsonwspOgmiosEvaluationResponse, headers).pipe(Effect.map(Blockfrost.transformJsonwspOgmiosEvaluationResult), Effect.mapError(wrapError("evaluateTx"))));
++  return withRateLimit(HttpUtils.postJson(`${baseUrl}/utils/txs/evaluate/utxos`, payload, Blockfrost.JsonwspOgmiosEvaluationResponse, headers).pipe(Effect.flatMap((response) => Effect.try({
++    try: () => Blockfrost.transformJsonwspOgmiosEvaluationResult(response),
++    catch: (e) => e
++  })), Effect.mapError(wrapError("evaluateTx"))));
+ };
+ //# sourceMappingURL=BlockfrostEffect.js.map
+\ No newline at end of file
 diff --git a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Blockfrost.ts b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Blockfrost.ts
 index db6e786..3b0bfa1 100644
 --- a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Blockfrost.ts
@@ -130,7 +141,7 @@ index db6e786..3b0bfa1 100644
      throw new Error("No evaluation result returned from Blockfrost")
    }
 diff --git a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts
-index 4271f0b..6f0ccb3 100644
+index 4271f0b..24e7aa0 100644
 --- a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts
 +++ b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts
 @@ -652,6 +652,11 @@ export const evaluateTx =
@@ -145,3 +156,19 @@ index 4271f0b..6f0ccb3 100644
              return [txIn, txOut]
            })
          : []
+@@ -667,6 +672,14 @@ export const evaluateTx =
+         payload,
+         Blockfrost.JsonwspOgmiosEvaluationResponse,
+         headers
+-      ).pipe(Effect.map(Blockfrost.transformJsonwspOgmiosEvaluationResult), Effect.mapError(wrapError("evaluateTx")))
++      ).pipe(
++        Effect.flatMap((response) =>
++          Effect.try({
++            try: () => Blockfrost.transformJsonwspOgmiosEvaluationResult(response),
++            catch: (e) => e
++          })
++        ),
++        Effect.mapError(wrapError("evaluateTx"))
++      )
+     )
+   }
