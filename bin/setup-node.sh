@@ -8,7 +8,7 @@ while [[ -L "$SOURCE" ]]; do
   [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
 done
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" > /dev/null 2>&1 && pwd)"
-CHIP_PATH="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CHIP_PATH="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 . "$HOME/.nvm/nvm.sh"
 nvm use 24
