@@ -101,9 +101,20 @@ const program = new Command()
     if (!refScript?.scriptRef) return logThenExit("Script didn't deploy");
     cborTxs.push(deployChain.cbor);
 
+    // Use only chained UTxOs (from setup/deploy transactions) for coin selection.
+    // This prevents OverlappingAdditionalUtxo when passAdditionalUtxos passes them
+    // to Ogmios for evaluation: on-chain wallet UTxOs already exist in the ledger
+    // and would cause an overlap fault if also included in additionalUtxoSet.
+    const setupTxHash = TransactionHash.toHex(ref.transactionId);
+    const deployTxHash = TransactionHash.toHex(refScript.transactionId);
+    const chainedTxHashes = new Set([setupTxHash, deployTxHash]);
+    const chainedUtxos = deployChain.available.filter((u) =>
+      chainedTxHashes.has(TransactionHash.toHex(u.transactionId))
+    );
+
     // Mint transaction: mint token using the deployed reference script
     const mintResult = await client
-      .newTx(deployChain.available)
+      .newTx(chainedUtxos)
       .mintAssets({
         assets: Assets.fromRecord({ [token]: amount }),
         redeemer: new Data.Constr({ index: 0n, fields: [] }),

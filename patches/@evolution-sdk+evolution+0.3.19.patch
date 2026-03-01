@@ -1,22 +1,8 @@
 diff --git a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/BlockfrostEffect.js b/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/BlockfrostEffect.js
-index 483bee1..5750a5b 100644
+index 483bee1..472ca67 100644
 --- a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/BlockfrostEffect.js
 +++ b/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/BlockfrostEffect.js
-@@ -414,8 +414,12 @@ export const evaluateTx = (baseUrl, projectId) => (tx, additionalUTxOs) => {
-     } : {}),
-     "Content-Type": "application/json"
-   };
-+  // Filter out UTxOs that are transaction inputs to prevent OverlappingAdditionalUtxo fault.
-+  // Ogmios rejects requests where the same UTxO appears in both tx.body.inputs and additionalUtxoSet.
-+  const txInputSet = new Set((tx.body.inputs || []).map(inp => `${TransactionHash.toHex(inp.transactionId)}#${inp.index}`));
-+  const nonOverlappingUTxOs = additionalUTxOs?.filter(utxo => !txInputSet.has(`${TransactionHash.toHex(utxo.transactionId)}#${utxo.index}`));
-   // Build additional UTxO set if provided
--  const additionalUtxoSet = additionalUTxOs && additionalUTxOs.length > 0 ? Ogmios.toOgmiosUTxOs(additionalUTxOs).map(utxo => {
-+  const additionalUtxoSet = nonOverlappingUTxOs && nonOverlappingUTxOs.length > 0 ? Ogmios.toOgmiosUTxOs(nonOverlappingUTxOs).map(utxo => {
-     const txIn = {
-       txId: utxo.transaction.id,
-       index: utxo.index
-@@ -430,6 +434,10 @@ export const evaluateTx = (baseUrl, projectId) => (tx, additionalUTxOs) => {
+@@ -430,6 +430,10 @@ export const evaluateTx = (baseUrl, projectId) => (tx, additionalUTxOs) => {
      } else if (utxo.datumHash) {
        txOut.datumHash = utxo.datumHash;
      }
@@ -28,34 +14,10 @@ index 483bee1..5750a5b 100644
    }) : [];
    const payload = {
 diff --git a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts
-index 4271f0b..a051d35 100644
+index 4271f0b..6f0ccb3 100644
 --- a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts
 +++ b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts
-@@ -631,10 +631,21 @@ export const evaluateTx =
-       "Content-Type": "application/json"
-     }
- 
-+    // Filter out UTxOs that are transaction inputs to prevent OverlappingAdditionalUtxo fault.
-+    // Ogmios rejects requests where the same UTxO appears in both tx.body.inputs and additionalUtxoSet.
-+    const txInputSet = new Set(
-+      (tx.body.inputs || []).map(
-+        (inp) => `${TransactionHash.toHex(inp.transactionId)}#${inp.index}`
-+      )
-+    )
-+    const nonOverlappingUTxOs = additionalUTxOs?.filter(
-+      (utxo) => !txInputSet.has(`${TransactionHash.toHex(utxo.transactionId)}#${utxo.index}`)
-+    )
-+
-     // Build additional UTxO set if provided
-     const additionalUtxoSet =
--      additionalUTxOs && additionalUTxOs.length > 0
--        ? Ogmios.toOgmiosUTxOs(additionalUTxOs).map((utxo) => {
-+      nonOverlappingUTxOs && nonOverlappingUTxOs.length > 0
-+        ? Ogmios.toOgmiosUTxOs(nonOverlappingUTxOs).map((utxo) => {
-             const txIn = {
-               txId: utxo.transaction.id,
-               index: utxo.index
-@@ -652,6 +663,11 @@ export const evaluateTx =
+@@ -652,6 +652,11 @@ export const evaluateTx =
                txOut.datumHash = utxo.datumHash
              }
  
