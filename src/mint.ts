@@ -1,4 +1,4 @@
-import { PlutusV2 } from "@evolution-sdk/evolution/PlutusV2";
+import { PlutusV3 } from "@evolution-sdk/evolution/PlutusV3";
 import {
   Address,
   Assets,
@@ -123,13 +123,13 @@ const program = new Command()
     );
   });
 
-const createScript = (plutus: string, ref: UTxO.UTxO): PlutusV2 => {
+const createScript = (plutus: string, ref: UTxO.UTxO): PlutusV3 => {
   const scriptHex = UPLC.applyParamsToScript(plutus, [
     TransactionHash.toBytes(ref.transactionId),
     ref.index,
   ]);
 
-  return new PlutusV2({ bytes: hexToBytes(scriptHex) });
+  return new PlutusV3({ bytes: hexToBytes(scriptHex) });
 };
 
 const createBlackholeAddress = (
@@ -142,7 +142,7 @@ const createBlackholeAddress = (
   const footer = "0048810014984d9595cd01";
 
   const scriptHex = `${header}${body}${footer}`;
-  const script = new PlutusV2({ bytes: hexToBytes(scriptHex) });
+  const script = new PlutusV3({ bytes: hexToBytes(scriptHex) });
   const scriptHash = ScriptHash.fromScript(script);
   return new Address.Address({
     networkId: network === "Mainnet" ? 1 : 0,
