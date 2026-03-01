@@ -50,10 +50,5 @@
     "tsx": "^4.21.0",
     "turbo": "^2.8.12",
     "typescript": "^5.9.3"
-  },
-  "pnpm": {
-    "patchedDependencies": {
-      "@evolution-sdk/evolution@0.3.19": "patches/@evolution-sdk__evolution@0.3.19.patch"
-    }
   }
 }
