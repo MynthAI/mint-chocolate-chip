@@ -94,7 +94,7 @@ const program = new Command()
       .newTx()
       .payToAddress({
         address: blackholeAddr,
-        assets: Assets.fromLovelace(2000000n),
+        assets: Assets.fromLovelace(5000000n),
         datum: new InlineDatum.InlineDatum({
           data: new Data.Constr({ index: 0n, fields: [] }),
         }),
