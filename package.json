@@ -10,14 +10,18 @@
   "homepage": "https://github.com/MynthAI/mint-chocolate-chip",
   "type": "module",
   "scripts": {
-    "build": "concurrently \"aiken build\" \"npx tsc\"",
+    "build:aiken": "aiken build",
+    "build:typescript": "npm exec tsc",
+    "build": "npm-run-all build:aiken build:typescript",
     "postinstall": "patch-package",
-    "mint": "npx tsx src/mint.ts",
-    "nft": "npx tsx src/nft.ts",
-    "distribute": "npx tsx src/distribute.ts",
-    "burn": "npx tsx src/burn.ts",
-    "prettier": "npx prettier -w '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'",
-    "lint": "concurrently \"npx prettier --check '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'\" \"npx eslint . --max-warnings=0\""
+    "prettier:aiken": "aiken fmt",
+    "prettier:prettier": "npm exec prettier -- -w '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'",
+    "prettier": "npm-run-all prettier:aiken prettier:prettier",
+    "lint:aiken": "aiken fmt --check",
+    "lint:eslint": "npm exec eslint .",
+    "lint:prettier": "npm exec prettier -- --check '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'",
+    "lint": "npm-run-all lint:aiken lint:prettier lint:eslint",
+    "test": "aiken check"
   },
   "dependencies": {
     "@evolution-sdk/evolution": "^0.3.19",
@@ -39,6 +43,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-node": "^0.3.9",
     "eslint-plugin-import": "^2.32.0",
+    "npm-run-all": "^4.1.5",
     "patch-package": "^8.0.1",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
