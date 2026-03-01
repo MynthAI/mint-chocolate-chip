@@ -2,7 +2,7 @@ diff --git a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/Bl
 index 483bee1..472ca67 100644
 --- a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/BlockfrostEffect.js
 +++ b/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/BlockfrostEffect.js
-@@ -430,6 +430,10 @@ export const evaluateTx = (baseUrl, projectId) => (tx, additionalUTxOs) => {
+@@ -430,6 +430,10 @@
      } else if (utxo.datumHash) {
        txOut.datumHash = utxo.datumHash;
      }
@@ -14,25 +14,19 @@ index 483bee1..472ca67 100644
    }) : [];
    const payload = {
 diff --git a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/Ogmios.js b/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/Ogmios.js
-index a1b2c3d..e4f5a6b 100644
+index a07671a..844af07 100644
 --- a/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/Ogmios.js
 +++ b/node_modules/@evolution-sdk/evolution/dist/sdk/provider/internal/Ogmios.js
-@@ -1,8 +1,9 @@
- import { Schema } from "effect";
- import * as CoreAddress from "../../../Address.js";
- import * as AssetName from "../../../AssetName.js";
- import * as Bytes from "../../../Bytes.js";
- import * as PlutusData from "../../../Data.js";
+@@ -6,6 +6,7 @@
  import * as NativeScripts from "../../../NativeScripts.js";
  import * as PolicyId from "../../../PolicyId.js";
  import * as TransactionHash from "../../../TransactionHash.js";
 +import * as UPLC from "../../../uplc/UPLC.js";
  export const JSONRPCSchema = schema => Schema.Struct({
-@@ -173,12 +174,15 @@ export const toOgmiosUTxOs = utxos => {
-         case "PlutusV1":
-           // For Plutus scripts, send only the raw script bytes without CBOR envelope
+   jsonrpc: Schema.String,
+   method: Schema.optional(Schema.String),
+@@ -173,17 +174,17 @@
            // Ogmios v6 expects raw scripts without CBOR tags when using explicit JSON notation
-+          // Convert double-CBOR to single-CBOR encoding as required by Ogmios
            return {
              language: "plutus:v1",
 -            cbor: Bytes.toHex(script.bytes)
@@ -50,11 +44,13 @@ index a1b2c3d..e4f5a6b 100644
 -            cbor: Bytes.toHex(script.bytes)
 +            cbor: UPLC.applySingleCborEncoding(Bytes.toHex(script.bytes))
            };
+       }
+     }
 diff --git a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts
 index 4271f0b..6f0ccb3 100644
 --- a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts
 +++ b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/BlockfrostEffect.ts
-@@ -652,6 +652,11 @@ export const evaluateTx =
+@@ -652,6 +652,11 @@
                txOut.datumHash = utxo.datumHash
              }
  
@@ -67,22 +63,22 @@ index 4271f0b..6f0ccb3 100644
            })
          : []
 diff --git a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Ogmios.ts b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Ogmios.ts
-index c1d2e3f..d4e5f6a 100644
+index 376891c..6805b0f 100644
 --- a/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Ogmios.ts
 +++ b/node_modules/@evolution-sdk/evolution/src/sdk/provider/internal/Ogmios.ts
-@@ -13,6 +13,7 @@ import * as NativeScripts from "../../../NativeScripts.js"
- import * as PolicyId from "../../../PolicyId.js"
+@@ -12,6 +12,7 @@
  import type * as CoreScript from "../../../Script.js"
  import * as TransactionHash from "../../../TransactionHash.js"
  import type * as CoreUTxO from "../../../UTxO.js"
 +import * as UPLC from "../../../uplc/UPLC.js"
  
-@@ -170,9 +171,12 @@ export const toOgmiosUTxOs = (utxos: readonly CoreUTxO.UTxO[]): OgmiosUTxO[] =>
+ export const JSONRPCSchema = <A, I, R>(schema: Schema.Schema<A, I, R>) =>
+   Schema.Struct({
+@@ -167,11 +168,11 @@
          case "PlutusV1":
            // For Plutus scripts, send only the raw script bytes without CBOR envelope
            // Ogmios v6 expects raw scripts without CBOR tags when using explicit JSON notation
 -          return { language: "plutus:v1", cbor: Bytes.toHex(script.bytes) }
-+          // Convert double-CBOR to single-CBOR encoding as required by Ogmios
 +          return { language: "plutus:v1", cbor: UPLC.applySingleCborEncoding(Bytes.toHex(script.bytes)) }
          case "PlutusV2":
 -          return { language: "plutus:v2", cbor: Bytes.toHex(script.bytes) }
@@ -90,3 +86,6 @@ index c1d2e3f..d4e5f6a 100644
          case "PlutusV3":
 -          return { language: "plutus:v3", cbor: Bytes.toHex(script.bytes) }
 +          return { language: "plutus:v3", cbor: UPLC.applySingleCborEncoding(Bytes.toHex(script.bytes)) }
+       }
+     }
+     return undefined
