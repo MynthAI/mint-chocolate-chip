@@ -62,13 +62,13 @@ const program = new Command()
 
     // Setup transaction: pay 2 ADA to self to create a unique UTxO as script parameter
     const setupResult = await client
-      .newTx(wallet.utxos)
+      .newTx()
       .payToAddress({
         address: changeAddress,
         assets: Assets.fromLovelace(2000000n),
       })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
-      .build({ changeAddress });
+      .build({ changeAddress, availableUtxos: wallet.utxos });
 
     const setupChain = await buildAndChain(setupResult, wallet.utxos);
     cborTxs.push(setupChain.cbor);
@@ -82,9 +82,16 @@ const program = new Command()
     const policy = ScriptHash.toHex(ScriptHash.fromScript(script));
     const token = policy + name;
 
-    // Deploy transaction: deploy script as reference to blackhole address
+    // Deploy transaction: deploy script as reference to blackhole address.
+    // Exclude ref from available UTxOs to ensure it is not consumed by this tx
+    // (ref must remain available for the mint transaction).
+    const deployUtxos = setupUtxos.filter(
+      (u) =>
+        TransactionHash.toHex(u.transactionId) !==
+          TransactionHash.toHex(ref.transactionId) || u.index !== ref.index
+    );
     const deployResult = await client
-      .newTx(setupUtxos)
+      .newTx()
       .payToAddress({
         address: blackholeAddr,
         assets: Assets.fromLovelace(2000000n),
@@ -94,16 +101,20 @@ const program = new Command()
         script,
       })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
-      .build({ changeAddress });
+      .build({ changeAddress, availableUtxos: deployUtxos });
 
     const deployChain = await buildAndChain(deployResult, setupUtxos);
     const refScript = deployChain.outputs.find((u) => u.scriptRef);
     if (!refScript?.scriptRef) return logThenExit("Script didn't deploy");
     cborTxs.push(deployChain.cbor);
 
-    // Mint transaction: mint token using the deployed reference script
+    // Mint transaction: mint token using the deployed reference script.
+    // Pass deployChain.available as availableUtxos so coin selection only uses
+    // off-chain UTxOs; this prevents on-chain UTxOs from being included in the
+    // additionalUtxoSet passed to the evaluator, which would cause an
+    // OverlappingAdditionalUtxo error.
     const mintResult = await client
-      .newTx(deployChain.available)
+      .newTx()
       .mintAssets({
         assets: Assets.fromRecord({ [token]: amount }),
         redeemer: new Data.Constr({ index: 0n, fields: [] }),
@@ -111,7 +122,11 @@ const program = new Command()
       .readFrom({ referenceInputs: [refScript] })
       .collectFrom({ inputs: [ref] })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
-      .build({ changeAddress, passAdditionalUtxos: true });
+      .build({
+        changeAddress,
+        availableUtxos: deployChain.available,
+        passAdditionalUtxos: true,
+      });
 
     const mintChain = await buildAndChain(mintResult, deployChain.available);
     cborTxs.push(mintChain.cbor);
