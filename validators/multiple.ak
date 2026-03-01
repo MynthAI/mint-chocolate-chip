@@ -1,7 +1,6 @@
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/crypto.{Blake2b_256, Hash}
-use cardano/assets
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input, OutputReference, Transaction}
 
@@ -47,8 +46,6 @@ fn allow_mint_only_once(
 ) -> Bool {
   inputs
     |> list.any(
-        fn(input) {
-          input.output_reference.transaction_id == reference
-        },
+        fn(input) { input.output_reference.transaction_id == reference },
       )
 }

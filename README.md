@@ -16,10 +16,10 @@ and builds upon the work of
 
 ## Installation
 
-To install the package, use npm:
+To install the package, use pnpm:
 
 ``` bash
-npm install
+pnpm install
 ```
 
 ## Usage
@@ -29,13 +29,13 @@ npm install
 To mint tokens, run the following command:
 
 ``` bash
-npm run mint <address> <token_name> <amount>
+pnpm run mint <address> <token_name> <amount>
 ```
 
 #### Example:
 
 ``` bash
-npm run mint addr_test1qzhvmeq0d4hpfsakgx6y9fg0c060qt2lgkvd8suz6p7qrv5h4ygl4jl2rg5zn0cfgv7la58hgn9xwqu3eflc28yqd7nq2ck7fk demo 1000
+pnpm run mint addr_test1qzhvmeq0d4hpfsakgx6y9fg0c060qt2lgkvd8suz6p7qrv5h4ygl4jl2rg5zn0cfgv7la58hgn9xwqu3eflc28yqd7nq2ck7fk demo 1000
 ```
 
 This will output CBOR for 3 transactions that can be signed and
@@ -48,13 +48,13 @@ a new reference.
 To burn tokens, run the following command:
 
 ``` bash
-npm run burn <address> <reference> <amount>
+pnpm run burn <address> <reference> <amount>
 ```
 
 #### Example:
 
 ``` bash
-npm run burn addr_test1qzhvmeq0d4hpfsakgx6y9fg0c060qt2lgkvd8suz6p7qrv5h4ygl4jl2rg5zn0cfgv7la58hgn9xwqu3eflc28yqd7nq2ck7fk 3dcebf74fe00edc5d7795a02891f6d32b3f235fc7990b05b9c08e293dcadc622 1000
+pnpm run burn addr_test1qzhvmeq0d4hpfsakgx6y9fg0c060qt2lgkvd8suz6p7qrv5h4ygl4jl2rg5zn0cfgv7la58hgn9xwqu3eflc28yqd7nq2ck7fk 3dcebf74fe00edc5d7795a02891f6d32b3f235fc7990b05b9c08e293dcadc622 1000
 ```
 
 Pass in the reference and how much you want to burn. This will output
@@ -64,7 +64,7 @@ CBOR that you can sign and submit.
 
 ### Step-by-Step Minting
 
-1.  **Run Mint Command**: Use the `npm run mint` command with the
+1.  **Run Mint Command**: Use the `pnpm run mint` command with the
     appropriate arguments.
       - `<address>`: The Cardano address where the tokens will be sent.
       - `<token_name>`: The name of the token you want to mint.
@@ -77,7 +77,7 @@ CBOR that you can sign and submit.
 
 ### Step-by-Step Burning
 
-1.  **Run Burn Command**: Use the `npm run burn` command with the
+1.  **Run Burn Command**: Use the `pnpm run burn` command with the
     appropriate arguments.
     
       - `<address>`: The Cardano address associated with the tokens.

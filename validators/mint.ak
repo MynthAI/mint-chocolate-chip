@@ -2,11 +2,8 @@ use aiken/collection/dict
 use aiken/collection/list
 use aiken/crypto.{Blake2b_256, Hash}
 use cardano/address.{Address, VerificationKey}
-use cardano/assets
 use cardano/assets.{PolicyId, Value}
-use cardano/transaction.{
-  Input, NoDatum, Output, OutputReference, Transaction,
-}
+use cardano/transaction.{Input, NoDatum, Output, OutputReference, Transaction}
 
 validator mint(tx_id: Hash<Blake2b_256, Transaction>, index: Int) {
   mint(_redeemer, policy: PolicyId, self: Transaction) {
@@ -90,7 +87,8 @@ test can_mint_multiple() {
 test can_burn() {
   let own_policy_id = #"ab"
   let utxo_ref = OutputReference { transaction_id: #"bc", output_index: 0 }
-  let inputs = inputs(OutputReference { transaction_id: #"de", output_index: 1 })
+  let inputs =
+    inputs(OutputReference { transaction_id: #"de", output_index: 1 })
   let mint =
     [Pair(own_policy_id, [Pair(#"", -1), Pair(#"abcd", -3)])]
       |> assets.from_asset_list()
@@ -100,7 +98,8 @@ test can_burn() {
 test cant_double_mint() fail {
   let own_policy_id = #"ab"
   let utxo_ref = OutputReference { transaction_id: #"bc", output_index: 0 }
-  let inputs = inputs(OutputReference { transaction_id: #"de", output_index: 1 })
+  let inputs =
+    inputs(OutputReference { transaction_id: #"de", output_index: 1 })
   let mint =
     [Pair(own_policy_id, [Pair(#"", 1), Pair(#"abcd", 3)])]
       |> assets.from_asset_list()

@@ -9,18 +9,24 @@
   },
   "homepage": "https://github.com/MynthAI/mint-chocolate-chip",
   "type": "module",
+  "packageManager": "pnpm@10.30.3",
   "scripts": {
-    "build": "concurrently \"aiken build\" \"npx tsc\"",
+    "build:aiken": "aiken build",
+    "build:typescript": "pnpm tsc",
+    "build": "npm-run-all build:aiken build:typescript",
     "postinstall": "patch-package",
-    "mint": "npx tsx src/mint.ts",
-    "nft": "npx tsx src/nft.ts",
-    "distribute": "npx tsx src/distribute.ts",
-    "burn": "npx tsx src/burn.ts",
-    "prettier": "npx prettier -w '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'",
-    "lint": "concurrently \"npx prettier --check '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'\" \"npx eslint . --max-warnings=0\""
+    "prettier:aiken": "aiken fmt",
+    "prettier:prettier": "pnpm exec prettier -w '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'",
+    "prettier": "npm-run-all prettier:aiken prettier:prettier",
+    "lint:aiken": "aiken fmt --check",
+    "lint:eslint": "pnpm eslint .",
+    "lint:prettier": "pnpm exec prettier --check '**/*.{js,jsx,ts,tsx,json,yml.j2,yml,yaml,.*}'",
+    "lint": "npm-run-all lint:aiken lint:prettier lint:eslint",
+    "test": "aiken check"
   },
   "dependencies": {
     "@evolution-sdk/evolution": "^0.3.19",
+    "@inquirer/prompts": "^8.3.0",
     "@noble/hashes": "^1.8.0",
     "arktype": "^2.1.29",
     "bech32": "^2.0.0",
@@ -30,6 +36,7 @@
     "ts-handling": "^0.2.6"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.3",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@types/node": "^22.19.13",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
@@ -39,9 +46,11 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-node": "^0.3.9",
     "eslint-plugin-import": "^2.32.0",
+    "npm-run-all": "^4.1.5",
     "patch-package": "^8.0.1",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
+    "turbo": "^2.8.12",
     "typescript": "^5.9.3"
   }
 }
