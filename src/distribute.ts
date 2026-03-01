@@ -10,9 +10,9 @@ import {
   TxSignBuilder,
   UTxO,
   validatorToAddress,
+  walletFromSeed,
 } from "@lucid-evolution/lucid";
 import { type } from "arktype";
-import { Seed } from "cardano-ts";
 import { Command } from "commander";
 import { chunk } from "es-toolkit/array";
 import { isProblem, mayFail } from "ts-handling";
@@ -56,10 +56,9 @@ const program = new Command()
     const network = getNetwork(projectId);
     const txs: TxSignBuilder[] = [];
     lucid.selectWallet.fromAddress(wallet.address, wallet.utxos);
-    const key = new Seed(
-      seed,
-      lucid.config().network! === "Mainnet" ? "mainnet" : "testnet"
-    ).getPrivateKey();
+    const key = walletFromSeed(seed, {
+      network: lucid.config().network!,
+    }).paymentKey;
 
     const chunks = chunk(Array.from({ length: Number(amount) }), amountPerTx);
     const setup = lucid

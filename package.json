@@ -21,7 +21,6 @@
   "dependencies": {
     "@lucid-evolution/lucid": "^0.4.29",
     "arktype": "^2.1.29",
-    "cardano-ts": "^0.4.1",
     "commander": "^14.0.3",
     "es-toolkit": "^1.44.0",
     "inquirer": "^13.3.0",
@@ -29,6 +28,7 @@
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+    "@types/node": "^22.19.13",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
     "concurrently": "^9.2.1",
