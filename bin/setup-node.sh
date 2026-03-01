@@ -28,6 +28,9 @@ pnpm install --frozen-lockfile --prefer-offline
 
 if [[ -n "${GITHUB_PATH:-}" ]]; then
   turbo_bin="$(realpath "$(pnpm which turbo 2>/dev/null | tail -n1 | xargs realpath)")"
-  bin_dir=$(dirname "$turbo_bin")
-  echo "$bin_dir" >> "$GITHUB_PATH"
+  turbo_bin_dir=$(dirname "$turbo_bin")
+  echo "$turbo_bin_dir" >> "$GITHUB_PATH"
+  aiken_bin="$(command -v aiken)"
+  aiken_bin_dir=$(dirname "$aiken_bin")
+  echo "$aiken_bin_dir" >> "$GITHUB_PATH"
 fi
