@@ -109,15 +109,13 @@ const program = new Command()
     cborTxs.push(deployChain.cbor);
 
     // Mint transaction: mint token using the deployed reference script.
-    // Pass deployChain.available as availableUtxos so coin selection only uses
-    // off-chain UTxOs; this prevents on-chain UTxOs from being included in the
-    // additionalUtxoSet passed to the evaluator, which would cause an
-    // OverlappingAdditionalUtxo error.
+    // The scriptDataHash is computed by the SDK even without an explicit redeemer
+    // because the Aiken validator uses CIP-0069 (no-redeemer mint), which requires
+    // the scriptDataHash to commit to the PlutusV3 language views.
     const mintResult = await client
       .newTx()
       .mintAssets({
         assets: Assets.fromRecord({ [token]: amount }),
-        redeemer: new Data.Constr({ index: 0n, fields: [] }),
       })
       .readFrom({ referenceInputs: [refScript] })
       .collectFrom({ inputs: [ref] })
@@ -125,7 +123,6 @@ const program = new Command()
       .build({
         changeAddress,
         availableUtxos: deployChain.available,
-        passAdditionalUtxos: true,
       });
 
     const mintChain = await buildAndChain(mintResult, deployChain.available);

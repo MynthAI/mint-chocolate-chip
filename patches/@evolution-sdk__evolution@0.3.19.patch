@@ -13,6 +13,31 @@ index 483bee1..472ca67 100644
      return [txIn, txOut];
    }) : [];
    const payload = {
+diff --git a/dist/sdk/builders/TxBuilderImpl.js b/dist/sdk/builders/TxBuilderImpl.js
+--- a/dist/sdk/builders/TxBuilderImpl.js
++++ b/dist/sdk/builders/TxBuilderImpl.js
+@@ -510,8 +510,10 @@
+     // Inline datums (InlineDatum) are NOT added to plutusData - they're already in the UTxO
+   }
+   // Compute scriptDataHash if there are Plutus scripts (redeemers present)
++  // Also compute for CIP-0069 no-redeemer scripts (Plutus reference inputs used for minting)
++  const hasPlutusRefScripts = state.referenceInputs.some(r => r.scriptRef && (r.scriptRef._tag === 'PlutusV1' || r.scriptRef._tag === 'PlutusV2' || r.scriptRef._tag === 'PlutusV3'));
+   let scriptDataHash;
+-  if (redeemers.length > 0) {
++  if (redeemers.length > 0 || hasPlutusRefScripts) {
+     // Get config to access provider for full protocol parameters
+     const config = yield* TxBuilderConfigTag;
+     if (!config.provider) {
+@@ -972,7 +974,8 @@
+     totalCollateral = state.collateral.totalAmount;
+   }
+   // Check if Plutus scripts are present (need scriptDataHash for accurate size)
+-  const hasPlutusScripts = fakeWitnessSet.plutusV1Scripts && fakeWitnessSet.plutusV1Scripts.length > 0 || fakeWitnessSet.plutusV2Scripts && fakeWitnessSet.plutusV2Scripts.length > 0 || fakeWitnessSet.plutusV3Scripts && fakeWitnessSet.plutusV3Scripts.length > 0;
++  // Also check reference inputs for CIP-0069 no-redeemer Plutus scripts
++  const hasPlutusScripts = fakeWitnessSet.plutusV1Scripts && fakeWitnessSet.plutusV1Scripts.length > 0 || fakeWitnessSet.plutusV2Scripts && fakeWitnessSet.plutusV2Scripts.length > 0 || fakeWitnessSet.plutusV3Scripts && fakeWitnessSet.plutusV3Scripts.length > 0 || state.referenceInputs.some(r => r.scriptRef && (r.scriptRef._tag === 'PlutusV1' || r.scriptRef._tag === 'PlutusV2' || r.scriptRef._tag === 'PlutusV3'));
+   // Create placeholder scriptDataHash if Plutus scripts are present
+   // This is needed for accurate size estimation (32 bytes + CBOR overhead)
+   const placeholderScriptDataHash = hasPlutusScripts ? new ScriptDataHash.ScriptDataHash({
 diff --git a/src/sdk/provider/internal/BlockfrostEffect.ts b/src/sdk/provider/internal/BlockfrostEffect.ts
 index 4271f0b..6f0ccb3 100644
 --- a/src/sdk/provider/internal/BlockfrostEffect.ts
@@ -29,3 +54,44 @@ index 4271f0b..6f0ccb3 100644
              return [txIn, txOut]
            })
          : []
+diff --git a/src/sdk/builders/TxBuilderImpl.ts b/src/sdk/builders/TxBuilderImpl.ts
+--- a/src/sdk/builders/TxBuilderImpl.ts
++++ b/src/sdk/builders/TxBuilderImpl.ts
+@@ -653,8 +653,16 @@
+     }
+ 
+     // Compute scriptDataHash if there are Plutus scripts (redeemers present)
++    // Also compute for CIP-0069 no-redeemer scripts (Plutus reference inputs used for minting)
++    const hasPlutusRefScripts = state.referenceInputs.some(
++      (r) =>
++        r.scriptRef &&
++        (r.scriptRef._tag === "PlutusV1" ||
++          r.scriptRef._tag === "PlutusV2" ||
++          r.scriptRef._tag === "PlutusV3")
++    )
+     let scriptDataHash: ReturnType<typeof hashScriptData> | undefined
+-    if (redeemers.length > 0) {
++    if (redeemers.length > 0 || hasPlutusRefScripts) {
+       // Get config to access provider for full protocol parameters
+       const config = yield* TxBuilderConfigTag
+ 
+@@ -1213,10 +1221,18 @@
+     }
+ 
+     // Check if Plutus scripts are present (need scriptDataHash for accurate size)
++    // Also check reference inputs for CIP-0069 no-redeemer Plutus scripts
+     const hasPlutusScripts =
+       (fakeWitnessSet.plutusV1Scripts && fakeWitnessSet.plutusV1Scripts.length > 0) ||
+       (fakeWitnessSet.plutusV2Scripts && fakeWitnessSet.plutusV2Scripts.length > 0) ||
+-      (fakeWitnessSet.plutusV3Scripts && fakeWitnessSet.plutusV3Scripts.length > 0)
++      (fakeWitnessSet.plutusV3Scripts && fakeWitnessSet.plutusV3Scripts.length > 0) ||
++      state.referenceInputs.some(
++        (r) =>
++          r.scriptRef &&
++          (r.scriptRef._tag === "PlutusV1" ||
++            r.scriptRef._tag === "PlutusV2" ||
++            r.scriptRef._tag === "PlutusV3")
++      )
+ 
+     // Create placeholder scriptDataHash if Plutus scripts are present
+     // This is needed for accurate size estimation (32 bytes + CBOR overhead)
