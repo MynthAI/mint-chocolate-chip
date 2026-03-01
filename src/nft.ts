@@ -117,7 +117,6 @@ const program = new Command()
       for (const token of tokens)
         mintBuilder.mintAssets({
           assets: Assets.fromRecord({ [token]: 1n }),
-          redeemer: new Data.Constr({ index: 0n, fields: [] }),
         });
 
       const mintResult = await mintBuilder
