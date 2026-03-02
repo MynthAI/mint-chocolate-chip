@@ -5,7 +5,8 @@
     "lint": {},
     "test": {},
     "ci": {
-      "dependsOn": ["build", "lint", "test"]
+      "dependsOn": ["build", "lint", "test"],
+      "env": ["BLOCKFROST_API_KEY", "SEED_PHRASE"]
     }
   }
 }
