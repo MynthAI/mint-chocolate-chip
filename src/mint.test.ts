@@ -2,6 +2,7 @@ import { createAikenEvaluator } from "@evolution-sdk/aiken-uplc";
 import {
   Assets,
   createClient,
+  Data,
   ScriptHash,
   SigningClient,
   Text,
@@ -64,6 +65,7 @@ describe("mint transaction", () => {
       .newTx()
       .mintAssets({
         assets: Assets.fromRecord({ [token]: tokenAmount }),
+        redeemer: Data.constr(0n, []),
       })
       .attachScript({ script })
       .collectFrom({ inputs: [ref] })
