@@ -130,6 +130,7 @@ const program = new Command()
       .newTx()
       .mintAssets({
         assets: Assets.fromRecord({ [token]: amount }),
+        redeemer: TransactionHash.toBytes(ref.transactionId),
       })
       .readFrom({ referenceInputs: [refScript] })
       .collectFrom({ inputs: [ref] })

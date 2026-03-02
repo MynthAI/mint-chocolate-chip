@@ -6,11 +6,15 @@ use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input, NoDatum, Output, OutputReference, Transaction}
 
 validator mint(tx_id: Hash<Blake2b_256, Transaction>, index: Int) {
-  mint(_redeemer, policy: PolicyId, self: Transaction) {
+  mint(
+    redeemer: Hash<Blake2b_256, Transaction>,
+    policy: PolicyId,
+    self: Transaction,
+  ) {
     let reference =
       OutputReference { transaction_id: tx_id, output_index: index }
     let Transaction { inputs, mint, .. } = self
-    mint_validator(policy, reference, inputs, mint)
+    redeemer == tx_id && mint_validator(policy, reference, inputs, mint)
   }
 
   else(_) {
