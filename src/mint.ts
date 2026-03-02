@@ -1,9 +1,11 @@
 import { PlutusV3 } from "@evolution-sdk/evolution/PlutusV3";
 import { calculateMinimumUtxoLovelace } from "@evolution-sdk/evolution/sdk/builders/TxBuilderImpl";
+import { createScalusEvaluator } from "@evolution-sdk/scalus-uplc";
 import {
   Address,
   Assets,
   createClient,
+  Data,
   Effect,
   ScriptHash,
   TransactionHash,
@@ -123,13 +125,15 @@ const program = new Command()
       .newTx()
       .mintAssets({
         assets: Assets.fromRecord({ [token]: amount }),
+        redeemer: Data.constr(0n, []),
       })
       .readFrom({ referenceInputs: [refScript] })
       .collectFrom({ inputs: [ref] })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
       .build({
-        changeAddress,
         availableUtxos: deployChain.available,
+        changeAddress,
+        evaluator: createScalusEvaluator,
         passAdditionalUtxos: true,
       });
 
