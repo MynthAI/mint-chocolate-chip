@@ -1,5 +1,6 @@
 import { PlutusV3 } from "@evolution-sdk/evolution/PlutusV3";
 import { calculateMinimumUtxoLovelace } from "@evolution-sdk/evolution/sdk/builders/TxBuilderImpl";
+import { createScalusEvaluator } from "@evolution-sdk/scalus-uplc";
 import {
   Address,
   Assets,
@@ -130,8 +131,9 @@ const program = new Command()
       .collectFrom({ inputs: [ref] })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
       .build({
-        changeAddress,
         availableUtxos: deployChain.available,
+        changeAddress,
+        evaluator: createScalusEvaluator,
         passAdditionalUtxos: true,
       });
 
