@@ -5,6 +5,7 @@ import {
   Assets,
   createClient,
   Data,
+  InlineDatum,
   Effect,
   ScriptHash,
   TransactionHash,
@@ -112,6 +113,9 @@ const program = new Command()
       .payToAddress({
         address: blackholeAddr,
         assets: Assets.fromLovelace(minLovelace),
+        datum: new InlineDatum.InlineDatum({
+          data: new Data.Constr({ index: 0n, fields: [] }),
+        }),
         script,
       })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
@@ -131,7 +135,6 @@ const program = new Command()
       .newTx()
       .mintAssets({
         assets: Assets.fromRecord({ [token]: amount }),
-        redeemer: new Data.Constr({ index: 0n, fields: [] }),
       })
       .readFrom({ referenceInputs: [refScript] })
       .collectFrom({ inputs: [ref] })
