@@ -1,12 +1,12 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["BLOCKFROST_API_KEY", "SEED_PHRASE"],
   "tasks": {
     "build": {},
     "lint": {},
     "test": {},
     "ci": {
-      "dependsOn": ["build", "lint", "test"],
-      "env": ["BLOCKFROST_API_KEY", "SEED_PHRASE"]
+      "dependsOn": ["build", "lint", "test"]
     }
   }
 }
