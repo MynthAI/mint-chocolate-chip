@@ -89,7 +89,7 @@ const program = new Command()
         address: blackholeAddr,
         assets: Assets.fromLovelace(2000000n),
         datum: new InlineDatum.InlineDatum({
-          data: new Data.Constr({ index: 0n, fields: [] }),
+          data: Data.constr(0n, []),
         }),
         script,
       })

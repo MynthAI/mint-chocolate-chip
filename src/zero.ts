@@ -1,9 +1,8 @@
-import { PlutusV2 } from "@evolution-sdk/evolution/PlutusV2";
+import { PlutusV3 } from "@evolution-sdk/evolution/PlutusV3";
 import {
   Address,
   Assets,
   createClient,
-  Data,
   ScriptHash,
   TransactionHash,
   UPLC,
@@ -64,7 +63,6 @@ const program = new Command()
       .newTx(wallet.utxos)
       .mintAssets({
         assets: Assets.fromRecord({ [token]: 1n }),
-        redeemer: new Data.Constr({ index: 0n, fields: [] }),
       })
       .attachScript({ script })
       .collectFrom({ inputs: [ref] })
@@ -79,7 +77,6 @@ const program = new Command()
       .newTx(mintChain.available)
       .mintAssets({
         assets: Assets.fromRecord({ [token]: -1n }),
-        redeemer: new Data.Constr({ index: 0n, fields: [] }),
       })
       .attachScript({ script })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
@@ -93,13 +90,15 @@ const program = new Command()
     console.log(`\nCreated token: ${token}`);
   });
 
-const createScript = (plutus: string, ref: UTxO.UTxO): PlutusV2 => {
-  const scriptHex = UPLC.applyParamsToScript(plutus, [
-    TransactionHash.toBytes(ref.transactionId),
-    ref.index,
-  ]);
+const createScript = (plutus: string, ref: UTxO.UTxO): PlutusV3 => {
+  const scriptHex = UPLC.applySingleCborEncoding(
+    UPLC.applyParamsToScript(plutus, [
+      TransactionHash.toBytes(ref.transactionId),
+      ref.index,
+    ])
+  );
 
-  return new PlutusV2({ bytes: hexToBytes(scriptHex) });
+  return new PlutusV3({ bytes: hexToBytes(scriptHex) });
 };
 
 program.parseAsync(process.argv);

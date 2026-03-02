@@ -2,7 +2,6 @@ import {
   Address,
   Assets,
   createClient,
-  Data,
   ScriptHash,
   Transaction,
   TransactionHash,
@@ -76,7 +75,6 @@ const program = new Command()
       .newTx(wallet.utxos)
       .mintAssets({
         assets: Assets.fromRecord({ [token]: amount * -1n }),
-        redeemer: new Data.Constr({ index: 0n, fields: [] }),
       })
       .readFrom({ referenceInputs: [refScript] })
       .setValidity({ to: BigInt(Date.now() + expiresIn) })
