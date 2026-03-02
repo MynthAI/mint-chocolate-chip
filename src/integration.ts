@@ -42,22 +42,8 @@ const run = async () => {
     wallet: { type: "seed", mnemonic: seed },
   });
 
-  // Setup transaction: pay 2 ADA to self to create a unique UTxO as script parameter
-  const setupResult = await client
-    .newTx()
-    .payToAddress({
-      address: changeAddress,
-      assets: Assets.fromLovelace(2000000n),
-    })
-    .setValidity({ to: BigInt(Date.now() + expiresIn) })
-    .build({ changeAddress, availableUtxos: wallet.utxos });
-
-  const setupChain = setupResult.chainResult();
-
-  // The first new output from the setup tx is the UTxO used to parameterize the script
-  const ref = setupChain.available.filter(
-    (u) => TransactionHash.toHex(u.transactionId) === setupChain.txHash
-  )[0];
+  // Use the first wallet UTxO as the script parameter
+  const ref = wallet.utxos[0];
 
   const script = createScript(plutus, ref);
   const policy = ScriptHash.toHex(ScriptHash.fromScript(script));
@@ -73,21 +59,11 @@ const run = async () => {
     .attachScript({ script })
     .collectFrom({ inputs: [ref] })
     .setValidity({ to: BigInt(Date.now() + expiresIn) })
-    .build({
-      changeAddress,
-      availableUtxos: setupChain.available,
-      passAdditionalUtxos: true,
-    });
-
-  // Sign and submit both transactions
-  const setupSubmit = await setupResult.sign();
-  const setupTxHash = TransactionHash.toHex(await setupSubmit.submit());
-  console.log(`Setup tx:  ${setupTxHash}`);
-  console.log(`Explorer:  ${explorerUrl(projectId, setupTxHash)}`);
+    .build({ changeAddress, availableUtxos: wallet.utxos });
 
   const mintSubmit = await mintResult.sign();
   const mintTxHash = TransactionHash.toHex(await mintSubmit.submit());
-  console.log(`\nMint tx:   ${mintTxHash}`);
+  console.log(`Mint tx:   ${mintTxHash}`);
   console.log(`Explorer:  ${explorerUrl(projectId, mintTxHash)}`);
 
   console.log(`\nPolicy ID: ${policy}`);
