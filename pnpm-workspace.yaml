@@ -1,6 +1,3 @@
-patchedDependencies:
-  "@evolution-sdk/evolution@0.3.19": patches/@evolution-sdk__evolution@0.3.19.patch
-
 onlyBuiltDependencies:
   - '@parcel/watcher'
   - cpu-features
