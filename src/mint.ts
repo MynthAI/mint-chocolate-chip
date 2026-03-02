@@ -7,8 +7,6 @@ import {
   Effect,
   ScriptHash,
   TransactionHash,
-  UPLC,
-  UTxO,
 } from "@evolution-sdk/evolution";
 import { Command } from "commander";
 import { isProblem } from "ts-handling";
@@ -20,7 +18,7 @@ import {
   TokenName,
   validate,
 } from "./inputs";
-import { loadPlutus } from "./script";
+import { createScript, loadPlutus } from "./script";
 import {
   expiresIn,
   getNetwork,
@@ -149,17 +147,6 @@ const program = new Command()
       `\nReference: ${TransactionHash.toHex(refScript.transactionId)}`
     );
   });
-
-const createScript = (plutus: string, ref: UTxO.UTxO): PlutusV3 => {
-  const scriptHex = UPLC.applySingleCborEncoding(
-    UPLC.applyParamsToScript(plutus, [
-      TransactionHash.toBytes(ref.transactionId),
-      ref.index,
-    ])
-  );
-
-  return new PlutusV3({ bytes: hexToBytes(scriptHex) });
-};
 
 const createBlackholeAddress = (
   network: "Mainnet" | "Preprod" | "Preview"

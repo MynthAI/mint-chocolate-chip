@@ -61,10 +61,16 @@ const Config = type({
   BLOCKFROST_API_KEY: "string==39",
 });
 
+const IntegrationConfig = type({
+  BLOCKFROST_API_KEY: "string==39",
+  SEED_PHRASE: "string",
+});
+
 export {
   Address,
   Amount,
   Config,
+  IntegrationConfig,
   logThenExit,
   Options,
   TokenName,
