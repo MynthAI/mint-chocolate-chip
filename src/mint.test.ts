@@ -1,3 +1,4 @@
+import { createAikenEvaluator } from "@evolution-sdk/aiken-uplc";
 import {
   Assets,
   createClient,
@@ -8,6 +9,7 @@ import {
   UTxO,
 } from "@evolution-sdk/evolution";
 import type { Evaluator } from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder";
+import { createScalusEvaluator } from "@evolution-sdk/scalus-uplc";
 import { beforeAll, describe, expect, it } from "vitest";
 import { IntegrationConfig, validate } from "./inputs";
 import { createScript, loadPlutus } from "./script";
@@ -21,15 +23,18 @@ import {
 const tokenName = Text.toHex("test");
 const tokenAmount = 1n;
 
-const hasCredentials =
-  !!process.env.BLOCKFROST_API_KEY && !!process.env.SEED_PHRASE;
-
-describe.skipIf(!hasCredentials)("mint transaction", () => {
+describe("mint transaction", () => {
   let token: string;
   let client: SigningClient;
   let ref: UTxO.UTxO;
 
   beforeAll(async () => {
+    expect(
+      process.env.BLOCKFROST_API_KEY,
+      "BLOCKFROST_API_KEY is required"
+    ).toBeTruthy();
+    expect(process.env.SEED_PHRASE, "SEED_PHRASE is required").toBeTruthy();
+
     const config = validate(IntegrationConfig, process.env);
     const projectId = config.BLOCKFROST_API_KEY;
     const seed = config.SEED_PHRASE;
@@ -70,14 +75,10 @@ describe.skipIf(!hasCredentials)("mint transaction", () => {
     expect(cbor).toBeTruthy();
   };
 
-  it("builds mint tx with aiken evaluator", async () => {
-    const { createAikenEvaluator } = await import("@evolution-sdk/aiken-uplc");
-    await buildMintTx(createAikenEvaluator)();
-  });
+  it("builds mint tx with aiken evaluator", buildMintTx(createAikenEvaluator));
 
-  it("builds mint tx with scalus evaluator", async () => {
-    const { createScalusEvaluator } =
-      await import("@evolution-sdk/scalus-uplc");
-    await buildMintTx(createScalusEvaluator)();
-  });
+  it(
+    "builds mint tx with scalus evaluator",
+    buildMintTx(createScalusEvaluator)
+  );
 });
