@@ -8,6 +8,7 @@ import {
   Data,
   Effect,
   ScriptHash,
+  Time,
   TransactionHash,
 } from "@evolution-sdk/evolution";
 import { Command } from "commander";
@@ -58,6 +59,7 @@ const program = new Command()
       network: parseNetwork(projectId),
       provider: makeBlockfrostConfig(projectId),
       wallet: { type: "read-only", address: wallet.address },
+      slotConfig: Time.SLOT_CONFIG_NETWORK[getNetwork(projectId)],
     });
 
     // Setup transaction: pay 2 ADA to self to create a unique UTxO as script parameter

@@ -9,6 +9,7 @@ import {
   InlineDatum,
   KeyHash,
   ScriptHash,
+  Time,
   TransactionHash,
   TransactionMetadatum,
   UPLC,
@@ -67,6 +68,7 @@ const program = new Command()
       network: parseNetwork(projectId),
       provider: makeBlockfrostConfig(projectId),
       wallet: { type: "seed", mnemonic: seed },
+      slotConfig: Time.SLOT_CONFIG_NETWORK[getNetwork(projectId)],
     });
 
     const chunks = chunk(Array.from({ length: Number(amount) }), amountPerTx);

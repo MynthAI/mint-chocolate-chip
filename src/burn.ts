@@ -3,6 +3,7 @@ import {
   Assets,
   createClient,
   ScriptHash,
+  Time,
   Transaction,
   TransactionHash,
   TransactionInput,
@@ -20,6 +21,7 @@ import {
 import { loadPlutus } from "./script";
 import {
   expiresIn,
+  getNetwork,
   loadWallet,
   makeBlockfrostConfig,
   parseNetwork,
@@ -69,6 +71,7 @@ const program = new Command()
       network: parseNetwork(projectId),
       provider: makeBlockfrostConfig(projectId),
       wallet: { type: "read-only", address: wallet.address },
+      slotConfig: Time.SLOT_CONFIG_NETWORK[getNetwork(projectId)],
     });
 
     const txResult = await client
