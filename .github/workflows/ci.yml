@@ -17,3 +17,6 @@ jobs:
 
       - name: Run CI
         run: npm exec turbo ci
+        env:
+          BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
+          SEED_PHRASE: ${{ secrets.SEED_PHRASE }}

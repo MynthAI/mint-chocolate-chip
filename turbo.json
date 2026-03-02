@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["BLOCKFROST_API_KEY", "SEED_PHRASE"],
   "tasks": {
     "build": {},
     "lint": {},
